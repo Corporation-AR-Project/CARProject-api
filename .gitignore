@@ -1,0 +1,4 @@
+download/**/*.txt
+json/*.json
+__pycache__
+.env
