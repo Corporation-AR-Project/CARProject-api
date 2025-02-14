@@ -2,8 +2,6 @@
 # uvicorn main:app --reload
 
 from fastapi import FastAPI, Query # FastAPI import
-from pydantic import BaseModel
-from typing import List, Union
 from data_process import DataProcess
 from calculator import Calculator
 import numpy as np
