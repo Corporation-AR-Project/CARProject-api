@@ -1,5 +1,5 @@
 # calculator.py
-from data_process import DataProcess
+from .data_process import DataProcess
 import numpy as np
 
 class Calculator : 
@@ -112,15 +112,15 @@ class Calculator :
                 
                 # 변화율 계산
                 if not one_year_calc_result == {} :
-                    # 매출총이익률
+                    # 매출총이익률 ((당해 매출총이익률 - 직전 매출총이익률) / 직전 매출총이익률 * 100)
                     if calc_result.get("매출총이익률") and one_year_calc_result.get("매출총이익률") :
                         trend_result_list["매출총이익률"].append((calc_result["매출총이익률"] - one_year_calc_result["매출총이익률"]) / one_year_calc_result["매출총이익률"] * 100)
 
-                    # 영업이익률
+                    # 영업이익률 ((당해 영업이익률 - 직전 영업이익률) / 직전 영업이익률 * 100)
                     if calc_result.get("영업이익률") and one_year_calc_result.get("영업이익률") :
                         trend_result_list["영업이익률"].append((calc_result["영업이익률"] - one_year_calc_result["영업이익률"]) / one_year_calc_result["영업이익률"] * 100)
 
-                    # 순이익률
+                    # 순이익률 ((당해 순이익률 - 직전 순이익률) / 직전 순이익률 * 100)
                     if calc_result.get("순이익률") and one_year_calc_result.get("순이익률") :
                         trend_result_list["순이익률"].append((calc_result["순이익률"] - one_year_calc_result["순이익률"]) / one_year_calc_result["순이익률"] * 100)
 
@@ -135,7 +135,7 @@ class Calculator :
                         last_wonga += type_company[str(int(year) - 1)]["판매비와관리비"]
 
                     # 매출원가 + 판관비 있는지 체크
-                    if not wonga == 0 and not last_wonga == 0 : # 둘다 0이 아니면
+                    if not wonga == 0 and not last_wonga == 0 : # 둘다 0이 아니면 ((당해 원가 - 직전 원가) / 직전 원가 * 100)
                         trend_result_list["매출원가및판관비"].append((wonga - last_wonga) / last_wonga * 100)
         # 값 세팅
         type_result = {
@@ -171,22 +171,22 @@ class Calculator :
         calc_result = {} # 결과값 세팅
 
         # 계산
-        # 유동비율 계산
+        # 유동비율 계산 (유동자산 / 유동부채 * 100)
         if data.get("유동자산") and data.get("유동부채") : 
             calc_result["유동비율"] = round(data["유동자산"] / data["유동부채"] * 100, 2)
-        # 부채비율 계산
+        # 부채비율 계산 (부채총계 / 자본총계 * 100)
         if data.get("부채총계") and data.get("자본총계") :
             calc_result["부채비율"] = round(data["부채총계"] / data["자본총계"] * 100, 2)
-        # 자본총계 계산
+        # 자본총계 계산 (자본총계 / 자산총계 * 100)
         if data.get("자본총계") and data.get("자산총계") : 
             calc_result["자기자본비율"] = round(data["자본총계"] / data["자산총계"] * 100, 2)
-        # 매출총이익률 계산
+        # 매출총이익률 계산 (매출총이익 / 매출액 * 100)
         if data.get("매출총이익") and data.get("매출액") :
             calc_result["매출총이익률"] = round(data["매출총이익"] / data["매출액"] * 100, 2)
-        # 영업이익 계산
+        # 영업이익 계산 (영업이익 / 매출액 * 100)
         if data.get("영업이익") and data.get("매출액") :
             calc_result["영업이익률"] = round(data["영업이익"] / data["매출액"] * 100, 2)
-        # 순이익률 계산
+        # 순이익률 계산 (순이익 / 매출액 * 100)
         if data.get("순이익") and data.get("매출액") :
             calc_result["순이익률"] = round(data["순이익"] / data["매출액"] * 100, 2)
 

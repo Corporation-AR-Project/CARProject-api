@@ -6,7 +6,7 @@ import requests
 from dotenv import load_dotenv
 
 # env 파일 설정
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 class DataProcess : 
@@ -44,7 +44,7 @@ class DataProcess :
     # info data 생성
     def info_data(self, reset = False) : 
         info = {} # 값 넣을 변수
-        info_list = ["bs", "pl", "cpl"] # 값 가져올 항목 (bs : 재무제표, pl : 손익계산서, cpl : 포괄손익계산서)
+        info_list = ["bs", "pl", "cpl"] # 값 가져올 항목 (bs : 재무상태표, pl : 손익계산서, cpl : 포괄손익계산서)
         
         # company_info.json 이 없거나 reset이 true 인 경우
         if not os.path.isfile("json/company_info.json") or reset == True : 
@@ -278,7 +278,7 @@ class DataProcess :
 
         # 공공데이터 API 호출
         url = "http://apis.data.go.kr/1160100/service/GetCorpBasicInfoService_V2/getCorpOutline_V2"
-        param = "?serviceKey=" + os.environ["API_SERVICE_KEY"] +"&pageNo=1&numOfRows=100&resultType=json&corpNm="
+        param = "?serviceKey=" + os.environ["API_SERVICE_KEY"] +"&pageNo=1&numOfRows=30&resultType=json&corpNm="
 
         # response 값 가져오기
         res = self.request_open_api(url, param + company_name)
