@@ -23,7 +23,7 @@ class DataProcess :
 
     # json 읽기
     def read_json(self, file_name) : 
-        with open("json/" + file_name + ".json", "r", encoding='UTF-8') as f :
+        with open("./json/" + file_name + ".json", "r", encoding='UTF-8') as f :
             json_data = json.load(f)
 
         return json_data
@@ -47,13 +47,13 @@ class DataProcess :
         info_list = ["bs", "pl", "cpl"] # 값 가져올 항목 (bs : 재무상태표, pl : 손익계산서, cpl : 포괄손익계산서)
         
         # company_info.json 이 없거나 reset이 true 인 경우
-        if not os.path.isfile("json/company_info.json") or reset == True : 
+        if not os.path.isfile("./json/company_info.json") or reset == True : 
             self.company_name_list = {} # 회사 명 목록 초기화
             self.company_jongmoc_list = {} # 회사 종목 목록 초기화
 
             # 정보 가져오기
             for type in info_list :
-                info = self.make_company_info("download/"+type+"/", type, info)
+                info = self.make_company_info("./download/"+type+"/", type, info)
 
             # 종목 코드에 맞게 데이터 정리
             for company_jongmoc in self.company_name_list :
@@ -73,7 +73,7 @@ class DataProcess :
                             if len(info[j].keys()) <= 3 : # 만약에 해당 회사명 내의 키가 3개 이하(데이터분류, 업종, 업종명 제외 없는 경우) 아예 info 내에서 drop 시키기
                                 info.pop(j, None)
             # company_info.json 파일 생성
-            with open('json/company_info.json', 'w', encoding='UTF-8') as f : json.dump(info, f, indent=4, ensure_ascii=False)
+            with open('./json/company_info.json', 'w', encoding='UTF-8') as f : json.dump(info, f, indent=4, ensure_ascii=False)
         else : # 그 외의 경우 그냥 company_info.json 데이터 가져옴
             info = self.read_json("company_info")
 
@@ -337,7 +337,7 @@ class DataProcess :
     def company_type_list(self, reset = False) : 
         type_list = {}
         # company_type.json이 없거나 reset이 True 이면
-        if not os.path.isfile("json/company_type.json") or reset == True:
+        if not os.path.isfile("./json/company_type.json") or reset == True:
             # 기업명 전부 가져와서
             for name in list(self.company_info.keys()) :
                 # 기업 데이터 내에서
@@ -346,7 +346,7 @@ class DataProcess :
                     type_list[info["업종"]] = []
                 type_list[info["업종"]].append(name)
             # 그리고 company_type.json 생성
-            with open('json/company_type.json', 'w', encoding='UTF-8') as f : json.dump(type_list, f, indent=4, ensure_ascii=False)
+            with open('./json/company_type.json', 'w', encoding='UTF-8') as f : json.dump(type_list, f, indent=4, ensure_ascii=False)
         else : # 있으면 company_type.json 불러오기
             type_list = self.read_json("company_type")
         

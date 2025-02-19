@@ -4,7 +4,7 @@
 from fastapi import FastAPI # FastAPI import
 from starlette.middleware.cors import CORSMiddleware
 
-from app.router import company
+from app.router import company, user
 
 app = FastAPI()
 
@@ -32,5 +32,6 @@ def default() :
         "data": {}
     }
 
-# /company router 추가
-app.include_router(company.router)
+# /~ router 추가
+app.include_router(company.router, tags=['company'])
+app.include_router(user.router, tags=['user'])

@@ -54,6 +54,24 @@ pip install pandas
 
 # python-dotenv
 pip install python-dotenv
+
+# sqlalchemy
+pip install sqlalchemy
+
+# alembic
+pip install alembic
+
+# pydantic[email]
+pip install "pydantic[email]"
+
+# passlib[bcrypt]
+pip install "passlib[bcrypt]"
+
+# python-multipart
+pip install python-multipart
+
+# python-jose[cryptography]
+pip install "python-jose[cryptography]"
 ```
 
 ### Run
