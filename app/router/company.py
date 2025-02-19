@@ -83,7 +83,7 @@ def company_analyze(name : str, first_year : int = None, last_year : int = None)
 @router.get("/data/reset")
 def company_data_reset(is_working = None) :
     # is_working이 True일때만 동작(잘못 호출했을때 작동하는 것을 방지)
-    if is_working == True :
+    if is_working :
         dp = DataProcess()
         dp.info_data(True)
     return {

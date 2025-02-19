@@ -113,6 +113,7 @@ class DataProcess :
                 yudongjasan = 0 # 유동자산
                 soun = 0 # 법인세차감전순손익
                 bubinse = 0 # 법인세
+                pangwanbe = 0 # 판관비
 
                 # 포괄손익계산서 일때, 손익계산서의 모든 항목이 있으면 건너뛰기
                 if file_type == "cpl" and (info.get("매출총이익") and info.get("매출액") and info.get("영업이익") and info.get("순이익") and info.get("매출원가") and info.get("판매비와관리비")) :
@@ -152,6 +153,12 @@ class DataProcess :
                         # 법인세 관련 로직
                         if ser['항목명'] in ["법인세비용(이익)", "법인세비용"] :
                             bubinse = ser['당기']
+                        # 판관비 관련 로직
+                        if ser['항목명'] in ['판매비', '관리비'] :
+                            pangwanbe += ser['당기']
+                        # 판관비 로직(2)
+                        if ser['항목명'] == "판매비와관리비" and isinstance(ser['당기'], int) and ser['당기'] < 0 :
+                            ser['당기'] = abs(ser['당기'])
 
                     # 항목명 목록에있고 값이 int형인 경우 추가
                     if ser['항목명'] in self.column_list and isinstance(ser['당기'], int) :
@@ -188,7 +195,7 @@ class DataProcess :
                     #     print(company)
 
                 # 손익계산서 한정 실행
-                if file_type == "pl" : 
+                if file_type == "pl" or file_type == "cpl" : 
                     # 매출액이 없는데 매출총이익과 매출원가가 있는 경우 매출액 계산
                     if info.get("매출액") == None and (not info.get("매출총이익") == None and not info.get("매출원가") == None ) :
                         info['매출액'] = info['매출총이익'] + info['매출원가']
@@ -196,6 +203,10 @@ class DataProcess :
                     # 순이익이 없고 법인세차감전순이익과 법인세가 있는 경우 순이익 계산
                     if info.get("순이익") == None and not bubinse == 0 and not soun == 0 :
                         info["순이익"] = soun - bubinse
+
+                    # 판매비와관리비가 없고 판관비 계산 값이 있는 경우
+                    if info.get("판매비와관리비") == None and not pangwanbe == 0 :
+                        info['판매비와관리비'] = pangwanbe
 
                     # 영업이익과 순이익이 없는 경우 회사 이름 출력
                     # if info.get('영업이익') == None or info.get('순이익') == None :

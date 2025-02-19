@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Date, Boolean
 from datetime import datetime
 from .database import Base
 
@@ -40,9 +40,13 @@ class Users(Base) :
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    userid = Column(String, nullable=False)
     username = Column(String, nullable=False)
     useremail = Column(String, nullable=False)
     password = Column(String, nullable=False)
+    birthday = Column(Date, nullable=True)
+    gender = Column(String, nullable=True)
+    foreginer = Column(Boolean, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.now)
 
 class SearchHistory(Base) : 

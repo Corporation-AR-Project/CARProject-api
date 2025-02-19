@@ -47,7 +47,7 @@ def login_user(response: Response, form_data : OAuth2PasswordRequestForm = Depen
         )
     # make access token
     data = {
-        "sub" : user.username,
+        "sub" : user.userid,
         "exp" : datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     }
 
