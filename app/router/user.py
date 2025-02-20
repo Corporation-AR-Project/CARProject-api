@@ -16,10 +16,11 @@ from datetime import timedelta, datetime
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"])
-SECRET_KEY = os.environ["SECRET_KEY"]
-ALGORITHM = os.environ["ALGORITHM"]
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"]) # access_token 종료 기간
+SECRET_KEY = os.environ["SECRET_KEY"] # secret_key
+ALGORITHM = os.environ["ALGORITHM"] # algorithm
 
+# router 설정
 router = APIRouter(
     prefix="/user"
 )
@@ -37,29 +38,33 @@ def join_user(_users_create: users_schema.UsersCreate, db : Session = Depends(ge
 # 로그인
 @router.post("/login", response_model=users_schema.LoginToken)
 def login_user(response: Response, form_data : OAuth2PasswordRequestForm = Depends(), db : Session = Depends(get_db)) :
-    # login check
-    user = users_crud.get_user(db, form_data.username)
+    # login 확인
+    user = users_crud.get_user(db, userid = form_data.username)
+    # 해당 userid의 유저가 없거나 비번이 틀린 경우
     if not user or not pwd_context.verify(form_data.password, user.password) : 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="아이디 혹은 비밀번호가 틀렸습니다.",
             headers={"WWW-Authenticate" : "Bearer"}
         )
-    # make access token
+
+    # 제한시간 등 정보 생성
     data = {
         "sub" : user.userid,
         "exp" : datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     }
 
+    # access token 생성
     access_token = jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
     
-    # 쿠키 저장
+    # 쿠키에 저장
     response.set_cookie(key="access_token", value=access_token, expires=data['exp'], httponly=True)
 
+    # 결과값 반환
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "username": user.username
+        "userid": user.userid
     }
 
 # 로그아웃
@@ -70,3 +75,4 @@ def logout_user(response : Response, request : Request) :
     # 쿠키 삭제
     response.delete_cookie(key="access_token")
     return HTTPException(status_code=status.HTTP_200_OK, detail = "로그아웃에 성공했습니다.")
+
