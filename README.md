@@ -33,6 +33,7 @@
 ## 개발 환경
 + `python 3.12.8`
 + `FastAPI`
++ `SQLite`
 
 ## 실행방법
 CARProject-api의 실행방법에 대해 기술합니다.
@@ -75,7 +76,13 @@ pip install "python-jose[cryptography]"
 ```
 
 ### Run
-아래 명령어로 local 환경에서 API를 실행합니다. (기본 port : 8000)
+SQLite DB 생성
+```
+alembic revision --autogenerate
+alembic upgrade head
+```
+
+local 환경에서 API를 실행 (기본 port : 8000)
 ```
 uvicorn main:app --reload
 ```

@@ -8,6 +8,7 @@ class Company(Base) :
 
     id = Column(Integer, primary_key=True, autoincrement=True) # id(아이디) | integer, primary key, autoincrement
     name = Column(String, nullable=False) # name(회사명) | string, not null
+    jongmok_code = Column(String, nullable=True) # jongmok_code(종목코드) | string, null
     industry_code = Column(String, nullable=True) # industry_code(업종코드) | string, null
     industry_name = Column(String, nullable=True) # industry_name(업종명) | string, null
 
@@ -51,6 +52,7 @@ class Users(Base) :
     birthday = Column(Date, nullable=True) # birthday(생일) | date, null
     gender = Column(String, nullable=True) # gender(성별) | string, null
     foreginer = Column(Boolean, nullable=True) # foreginer(외국인 여부) | boolean, null
+    phone = Column(String, nullable=True) # phone(전화번호) | String, null
     created_at = Column(DateTime, nullable=False, default=datetime.now) # created_at(생성일자) | datetime, not null, default = datetime.now
 
 # 검색 기록 테이블
