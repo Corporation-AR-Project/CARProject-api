@@ -9,19 +9,30 @@ class CompanyCreate(BaseModel) :
 class CompanyInfoCreate(BaseModel) : 
     company_id : int
     year : str
-    current_assets : int
-    total_assets : int
-    current_liabilities : int
-    total_debt : int
-    total_capital : int
-    revenue : int
-    cost_revenue : int
-    total_revenue : int
-    expenses : int
-    operating_profit : int
-    net_profit : int
+    current_assets : int | None
+    total_assets : int | None
+    current_liabilities : int | None
+    total_debt : int | None
+    total_capital : int | None
+    revenue : int | None
+    cost_revenue : int | None
+    total_revenue : int | None
+    expenses : int | None
+    operating_profit : int | None
+    net_profit : int | None
 
 class InterestCompanyCreate(BaseModel) :
     user_id : int
     company_id : int
 
+class CompanyUpdate(CompanyCreate) : 
+    id : int
+
+class CompanyInfoUpdate(CompanyInfoCreate) :
+    id : int
+
+class CompanyYearInfoSearch(BaseModel) : 
+    company_id : int | None
+    first_year : str
+    last_year : str
+    industry_code : str | None

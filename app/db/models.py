@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Date, Boolean
 from datetime import datetime
 from .database import Base
+from sqlalchemy.orm import relationship
 
 # 회사 테이블
 class Company(Base) : 
@@ -11,6 +12,7 @@ class Company(Base) :
     jongmok_code = Column(String, nullable=True) # jongmok_code(종목코드) | string, null
     industry_code = Column(String, nullable=True) # industry_code(업종코드) | string, null
     industry_name = Column(String, nullable=True) # industry_name(업종명) | string, null
+    is_visible = Column(Boolean, nullable=False, default=True) # is_visible(노출여부) | boolean, not null, default = True
 
 # 회사 년도별 정보 테이블
 class CompanyYearInfo(Base) :
@@ -30,6 +32,7 @@ class CompanyYearInfo(Base) :
     expenses = Column(Integer, nullable=True) # expenses(판매비와관리비) | integer, null
     operating_profit = Column(Integer, nullable=True) # operating_profit(영업이익) | integer, null
     net_profit = Column(Integer, nullable=True) # net_profit(순이익) | integer, null
+    is_visible = Column(Boolean, nullable=False, default=True) # is_visible(노출여부) | boolean, not null, default = True
 
 # 관심 기업 테이블
 class InteresetCompany(Base) : 

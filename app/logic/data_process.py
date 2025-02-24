@@ -1,9 +1,11 @@
 # data_process.py
-import json
-import pandas as pd
-import os
-import requests
+from fastapi import Depends
+import json, os, requests, pandas as pd
 from dotenv import load_dotenv
+from sqlalchemy.orm import Session
+from ..db.database import get_db
+from ..db.crud import company_crud
+from ..db.schema import company_schema
 
 # env 파일 설정
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,7 +19,6 @@ class DataProcess :
         self.current_liabilities = json_data["current_liabilities"] # 유동 부채 목록
         self.column_list = json_data["column_list"] # 가져올 컬럼 명 목록
         self.company_info = self.info_data() # 회사 정보 목록 가져오기
-        self.company_type = self.company_type_list() # 회사 업종 목록 가져오기
         self.company_name_list = {}
         self.company_jongmoc_list = {}
 
@@ -70,7 +71,7 @@ class DataProcess :
                                 info[name][y] = info[j][y] # 그래서 회사명 기준 이름 항목에다가 해당 년도 데이터 집어넣기
                                 info[name] = dict(sorted(info[name].items())) # 키 기준으로 정렬
                                 info[j].pop(y, None) # 기존 dict에서 년도 지우기
-                            if len(info[j].keys()) <= 3 : # 만약에 해당 회사명 내의 키가 3개 이하(데이터분류, 업종, 업종명 제외 없는 경우) 아예 info 내에서 drop 시키기
+                            if len(info[j].keys()) <= 4 : # 만약에 해당 회사명 내의 키가 3개 이하(데이터분류, 업종, 업종명, 종목코드 제외 없는 경우) 아예 info 내에서 drop 시키기
                                 info.pop(j, None)
             # company_info.json 파일 생성
             with open('./json/company_info.json', 'w', encoding='UTF-8') as f : json.dump(info, f, indent=4, ensure_ascii=False)
@@ -79,7 +80,6 @@ class DataProcess :
 
         # company_info 데이터 세팅
         self.company_info = info
-        self.company_type_list(True) # 그리고 회사 업종 목록 초기화
 
         return info
 
@@ -240,10 +240,15 @@ class DataProcess :
                 data_type = ""
                 if file_type == "CPL" :
                     data_type = "포괄손익계산서"
+
+                jongmoc = jongmoc.replace('[','').replace(']','')
+                if jongmoc == "null" :
+                    jongmoc = ""
                 # 년도별 회사 정보 넣기
                 list[company]['데이터분류'] = data_type
                 list[company]['업종'] = company_type
                 list[company]['업종명'] = company_type_name
+                list[company]['종목코드'] = jongmoc
                 list[company][year] = info
 
         return list
@@ -343,34 +348,3 @@ class DataProcess :
                         break # 반복문 탈출
 
         return data
-
-    # company_type.json 생성
-    def company_type_list(self, reset = False) : 
-        type_list = {}
-        # company_type.json이 없거나 reset이 True 이면
-        if not os.path.isfile("./json/company_type.json") or reset == True:
-            # 기업명 전부 가져와서
-            for name in list(self.company_info.keys()) :
-                # 기업 데이터 내에서
-                info = self.company_info[name]
-                if not type_list.get(info["업종"]) : # 업종만 뽑기
-                    type_list[info["업종"]] = []
-                type_list[info["업종"]].append(name)
-            # 그리고 company_type.json 생성
-            with open('./json/company_type.json', 'w', encoding='UTF-8') as f : json.dump(type_list, f, indent=4, ensure_ascii=False)
-        else : # 있으면 company_type.json 불러오기
-            type_list = self.read_json("company_type")
-        
-        # self.company_type에다가 값넣기
-        self.company_type = type_list
-
-        return type_list
-
-    # 특정 업종의 회사 목록 검색
-    def search_company_type(self, type_code) :
-        type_list = []
-        if self.company_type.get(type_code) :
-            type_list = self.company_type[type_code]
-        
-        return type_list
-

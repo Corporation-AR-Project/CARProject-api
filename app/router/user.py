@@ -25,7 +25,18 @@ router = APIRouter(
     prefix="/user"
 )
 
-# 회원가입
+# 회원가입 API (POST)
+# API URL : http://localhost:8000/user/join
+# 파라미터
+# userid | str not null
+# username | str not null
+# useremail | str not null
+# password | str not null
+# passwordCheck | str not null
+# birthday | date not null
+# gender | str not null
+# foreginer | boolean not null
+# phone | str not null
 @router.post("/join", status_code=status.HTTP_204_NO_CONTENT)
 def join_user(_users_create: users_schema.UsersCreate, db : Session = Depends(get_db)) :
     # user 존재하는지 체크
@@ -35,7 +46,11 @@ def join_user(_users_create: users_schema.UsersCreate, db : Session = Depends(ge
     # 없으면 생성
     users_crud.create_user(db = db, user_create=_users_create)
 
-# 로그인
+# 로그인 API (POST)
+# API URL : http://localhost:8000/user/login
+# 파라미터
+# username | str not null
+# password | str not null
 @router.post("/login", response_model=users_schema.LoginToken)
 def login_user(response: Response, form_data : OAuth2PasswordRequestForm = Depends(), db : Session = Depends(get_db)) :
     # login 확인
@@ -71,14 +86,16 @@ def login_user(response: Response, form_data : OAuth2PasswordRequestForm = Depen
         "userid": user.userid
     }
 
-# 로그아웃
+# 로그아웃 API (GET)
+# API URL : http://localhost:8000/user/logout
 @router.get("/logout")
 def logout_user(response : Response) :
     # 쿠키 삭제
     response.delete_cookie(key="access_token")
     return HTTPException(status_code=status.HTTP_200_OK, detail = "로그아웃에 성공했습니다.")
 
-# 로그인 체크
+# 로그인 체크 API (GET)
+# API URL : http://localhost:8000/user/auth
 @router.get("/auth")
 def isLogin_check(request : Request) :
     is_login = False
@@ -90,7 +107,8 @@ def isLogin_check(request : Request) :
         "is_login" : is_login
     }
 
-# 회원 정보 조회
+# 회원 정보 조회 API (GET)
+# API URL : http://localhost:8000/user/info
 @router.get("/info")
 def info_user(request : Request, db : Session = Depends(get_db)) : 
     access_token = request.cookies.get("access_token")
@@ -111,7 +129,15 @@ def info_user(request : Request, db : Session = Depends(get_db)) :
         }
     return data
 
-# 회원정보 업데이트
+# 회원정보 업데이트 API (POST)
+# API URL : http://localhost:8000/user/modify
+# 파라미터
+# username | str not null
+# useremail | str not null
+# birthday | date not null
+# gender | str not null
+# foreginer | boolean not null
+# phone | str not null
 @router.post("/modify", status_code=status.HTTP_204_NO_CONTENT)
 def modify_user(_user_update : users_schema.UserInfoUpdate, request : Request, response : Response, db : Session = Depends(get_db)) :
     access_token = request.cookies.get("access_token")
@@ -136,7 +162,11 @@ def modify_user(_user_update : users_schema.UserInfoUpdate, request : Request, r
         # 쿠키에 저장
         response.set_cookie(key="access_token", value=access_token, expires=ACCESS_TOKEN_EXPIRE_MINUTES, httponly=True)
 
-# 비밀번호 수정
+# 비밀번호 수정 API (POST)
+# API URL : http://localhost:8000/user/modify_password
+# 파라미터
+# password | str not null
+# changePassword | str not null
 @router.post("/modify_password", status_code=status.HTTP_204_NO_CONTENT)
 def modify_password_user(_user_password_update : users_schema.UserPasswordUpdate, request : Request, db : Session = Depends(get_db)) :
     access_token = request.cookies.get("access_token")
@@ -156,7 +186,10 @@ def modify_password_user(_user_password_update : users_schema.UserPasswordUpdate
     else :
         users_crud.update_password_user(db, user_password_update=_user_password_update)
 
-# 회원 탈퇴
+# 회원 탈퇴 API (POST)
+# API URL : http://localhost:8000/user/withdraw
+# 파라미터
+# id | int not null
 @router.post("/withdraw", status_code=status.HTTP_204_NO_CONTENT)
 def withdraw_user(id : int, request : Request, response : Response, db : Session = Depends(get_db)) :
     access_token = request.cookies.get("access_token")
