@@ -64,6 +64,7 @@ class SearchHistory(Base) :
 
     id = Column(Integer, primary_key=True, autoincrement=True) # id(아이디) | integer, primary key, autoincrement
     user_id = Column(Integer, ForeignKey("users.id")) # user_id(유저 테이블 아이디) | integer, foreginKey(Users Table - id)
+    company_id = Column(Integer, ForeignKey("company.id")) # company_id(기업 테이블 아이디) | integer, foreginKey(Company Table - id)
     company_name = Column(String, nullable=False) # company_name(회사명) | String, not null
     start_year = Column(String, nullable=True) # start_year(검색 시작 년도) | String, null
     end_year = Column(String, nullable=True) # end_year(검색 끝 년도) | String, null

@@ -207,3 +207,16 @@ def jwt_token_check(access_token, id = None) :
         if id == None or id == info['id'] : 
             flag = True
     return flag
+
+# 아이디 중복 확인 API (GET)
+# API URL : http://localhost:8000/user/duplicationCheck
+# 파라키터
+# userid | str not null
+@router.get("/duplicationCheck")
+def userid_duplicateCheck(userid : str, db : Session = Depends(get_db)) :
+    user = users_crud.get_user(db, userid)
+    result = { "is_duplication" : True }
+    if user == None :
+        result = { "is_duplication" : False }
+
+    return result

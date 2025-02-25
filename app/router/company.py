@@ -1,5 +1,5 @@
 # app/router/company.py
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from ..logic.data_process import DataProcess
 from ..logic.calculator import Calculator
 import numpy as np
@@ -7,6 +7,17 @@ from sqlalchemy.orm import Session
 from ..db.database import get_db
 from ..db.crud import company_crud
 from ..db.schema import company_schema
+from jose import jwt
+from dotenv import load_dotenv
+import os
+
+# env 파일 설정
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"]) # access_token 종료 기간
+SECRET_KEY = os.environ["SECRET_KEY"] # secret_key
+ALGORITHM = os.environ["ALGORITHM"] # algorithm
 
 router = APIRouter(
     prefix="/company"
@@ -57,7 +68,7 @@ def company_info(name : str, db : Session = Depends(get_db)) :
 # first_year | int, null able
 # last_year | int, null able
 @router.get("/analyze")
-def company_analyze(company_id : str, first_year : int = None, last_year : int = None, db : Session = Depends(get_db)) :
+def company_analyze(request : Request, company_id : str, first_year : int = None, last_year : int = None, db : Session = Depends(get_db)) :
     calc = Calculator()
     company = company_crud.search_company_name(db, id=company_id)
     year_list = company_crud.search_company_year_list(db, company_id=company.id)
@@ -121,6 +132,18 @@ def company_analyze(company_id : str, first_year : int = None, last_year : int =
             # 실제로 계산 가능한지 확인
             if set(year_list).issubset(set(l)) :
                 result = calc.calc(year_list, company_info, industry_company_list) # 문제 없으면 계산
+
+                access_token = request.cookies.get("access_token")
+                if not access_token == None :
+                    info = jwt.decode(access_token, SECRET_KEY, algorithms=ALGORITHM)
+                    company_crud.create_search_history(db, company_schema.CompanyHistory(
+                        user_id=info['id'],
+                        company_id=company.id,
+                        company_name = company.name,
+                        start_year=str(first_year),
+                        end_year=str(last_year)
+                    ))
+
             else : # 계산 불가능하면 검색 결과 없다고 뜨게
                 result = {
                     "msg" : "검색결과 없습니다."

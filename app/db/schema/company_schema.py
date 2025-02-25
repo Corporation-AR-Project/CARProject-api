@@ -36,3 +36,10 @@ class CompanyYearInfoSearch(BaseModel) :
     first_year : str
     last_year : str
     industry_code : str | None
+
+class CompanyHistory(BaseModel) :
+    user_id : int
+    company_id : int
+    company_name : str
+    start_year : str
+    end_year : str

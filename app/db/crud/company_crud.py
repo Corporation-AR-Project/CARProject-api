@@ -1,5 +1,5 @@
-from ..models import Company, CompanyYearInfo
-from ..schema.company_schema import CompanyCreate, CompanyInfoCreate, CompanyUpdate, CompanyInfoUpdate, CompanyYearInfoSearch
+from ..models import Company, CompanyYearInfo, SearchHistory
+from ..schema.company_schema import CompanyCreate, CompanyInfoCreate, CompanyUpdate, CompanyInfoUpdate, CompanyYearInfoSearch, CompanyHistory
 from sqlalchemy.orm import Session
 from sqlalchemy import update
 
@@ -111,3 +111,15 @@ def search_industry_year_info(db : Session, company_year_info_search : CompanyYe
         CompanyYearInfo.year >= company_year_info_search.first_year, 
         CompanyYearInfo.year <= company_year_info_search.last_year
     ).all()
+
+# 검색 기록 저장
+def create_search_history(db : Session, create_history : CompanyHistory) : 
+    db_search_history = SearchHistory(
+        user_id = create_history.user_id,
+        company_id = create_history.company_id,
+        company_name = create_history.company_name,
+        start_year = create_history.start_year,
+        end_year = create_history.end_year
+    )
+    db.add(db_search_history)
+    db.commit()

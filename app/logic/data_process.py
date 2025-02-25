@@ -2,10 +2,6 @@
 from fastapi import Depends
 import json, os, requests, pandas as pd
 from dotenv import load_dotenv
-from sqlalchemy.orm import Session
-from ..db.database import get_db
-from ..db.crud import company_crud
-from ..db.schema import company_schema
 
 # env 파일 설정
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
