@@ -1,7 +1,7 @@
-from ..models import Company, CompanyYearInfo, SearchHistory
-from ..schema.company_schema import CompanyCreate, CompanyInfoCreate, CompanyUpdate, CompanyInfoUpdate, CompanyYearInfoSearch, CompanyHistory
+from ..models import Company, CompanyYearInfo, SearchHistory, InteresetCompany
+from ..schema.company_schema import CompanyCreate, CompanyInfoCreate, CompanyUpdate, CompanyInfoUpdate, CompanyYearInfoSearch, CompanyHistory, InterestCompanyCreate
 from sqlalchemy.orm import Session
-from sqlalchemy import update
+from sqlalchemy import update, delete
 
 # 기업 생성
 def create_company(db : Session, company_create : CompanyCreate) :
@@ -123,3 +123,61 @@ def create_search_history(db : Session, create_history : CompanyHistory) :
     )
     db.add(db_search_history)
     db.commit()
+
+# 검색 기록 삭제
+def delete_search_history(db : Session, history_id : int ) :
+    stmt = (
+        delete(SearchHistory)
+        .where(
+            SearchHistory.id == history_id
+        )
+    )
+    db.execute(stmt)
+    db.commit()
+
+# 검색 기록 목록
+def search_history_list(db : Session, user_id : int, page : int = 0, limit : int = 10) : 
+    _history_list = db.query(SearchHistory).filter(
+        SearchHistory.user_id == user_id
+    ).order_by(SearchHistory.id.desc())
+    total = _history_list.count()
+    history_list = _history_list.offset(page).limit(limit).all()
+    return total, history_list
+
+# 관심 기업 등록
+def create_interest_company(db : Session, interest_company : InterestCompanyCreate) :
+    db_interest_company = InteresetCompany(
+        user_id = interest_company.user_id,
+        company_id = interest_company.company_id
+    )
+    db.add(db_interest_company)
+    db.commit()
+
+# 관심 기업 해제
+def delete_interest_company(db : Session, interest_id : int) : 
+    stmt = (
+        delete(InteresetCompany)
+        .where(
+            InteresetCompany.id == interest_id
+        )
+    )
+    db.execute(stmt)
+    db.commit()
+
+# 관심 기업인지 확인
+def check_interest_company(db : Session, user_id : int, company_id : int) : 
+    return db.query(InteresetCompany).filter(
+        InteresetCompany.user_id == user_id, 
+        InteresetCompany.company_id == company_id
+    ).first()
+
+# 관심 기업 목록
+def search_interest_list(db : Session, user_id : int, page : int = 0, limit : int = 10) : 
+    _interest_list = db.query(InteresetCompany, Company).join(Company).filter(
+        InteresetCompany.company_id == Company.id,
+        InteresetCompany.user_id == user_id
+    ).order_by(InteresetCompany.id.desc())
+    total = _interest_list.count()
+    interest_list = _interest_list.offset(page).limit(limit).all()
+
+    return total, interest_list

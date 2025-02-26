@@ -3,8 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.orm import Session
 from ..db.database import get_db
 from starlette import status
-from ..db.crud import users_crud
-from ..db.schema import users_schema
+from ..db.crud import users_crud, company_crud
+from ..db.schema import users_schema, company_schema
 from ..db.crud.users_crud import pwd_context
 from fastapi.security import OAuth2PasswordRequestForm
 from jose import jwt
@@ -210,7 +210,7 @@ def jwt_token_check(access_token, id = None) :
 
 # 아이디 중복 확인 API (GET)
 # API URL : http://localhost:8000/user/duplicationCheck
-# 파라키터
+# 파라미터
 # userid | str not null
 @router.get("/duplicationCheck")
 def userid_duplicateCheck(userid : str, db : Session = Depends(get_db)) :
@@ -220,3 +220,118 @@ def userid_duplicateCheck(userid : str, db : Session = Depends(get_db)) :
         result = { "is_duplication" : False }
 
     return result
+
+# 관심 기업 목록 검색 API (GET)
+# API URL : http://localhost:8000/user/interest_company_list
+# 파라미터
+# page | int not null default = 1
+# limit | int not null default = 10
+@router.get("interest_company_list")
+def search_interest_company_list(request : Request, page : int = 1, limit : int = 10, db : Session = Depends(get_db)) :
+    access_token = request.cookies.get("access_token")
+    if not jwt_token_check(access_token) :
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="접근 권한이 없습니다.")
+    else :
+        info = jwt.decode(access_token, SECRET_KEY, algorithms=ALGORITHM)
+        user = users_crud.get_user(db, userid = dict(info)['userid'])
+        start = (page - 1)  * limit
+        total, _interest_list = company_crud.search_interest_list(db, user_id=user.id, page = start, limit = limit)
+        interest_list = []
+        for item in _interest_list :
+            interest_list.append({
+                "id" : item[0].id,
+                "company_name" : item[1].name,
+                "company_id" : item[0].company_id,
+                "user_id" : item[0].user_id,
+                "created_at" : item[0].created_at
+            })
+
+        return {
+            "total" : total,
+            "list" : interest_list
+        }
+
+# 관심 기업 등록 API (POST)
+# API URL : http://localhost:8000/user/add_interest_company
+# 파라미터
+# company_id | int not null
+@router.post("add_interest_company", status_code=status.HTTP_202_ACCEPTED)
+def create_interest_company(request : Request, company_id : int, db : Session = Depends(get_db)) :
+    access_token = request.cookies.get("access_token")
+    if not jwt_token_check(access_token) :
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="접근 권한이 없습니다.")
+    else :
+        info = jwt.decode(access_token, SECRET_KEY, algorithms=ALGORITHM)
+        user = users_crud.get_user(db, userid = dict(info)['userid'])
+        company_crud.create_interest_company(db, company_schema.InterestCompanyCreate(user_id = user.id, company_id=company_id))
+
+        return {
+            "msg" : "성공적으로 관심 기업이 등록되었습니다."
+        }
+
+# 관심 기업 해제 API (POST)
+# API URL : http://localhost:8000/user/remove_interest_company
+# 파라미터
+# interest_id | int not null
+@router.post("remove_interest_company")
+def delete_interest_company(request : Request, interest_id : int, db : Session = Depends(get_db)) :
+    access_token = request.cookies.get("access_token")
+    if not jwt_token_check(access_token) :
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="접근 권한이 없습니다.")
+    else :
+        company_crud.delete_interest_company(db, interest_id)
+
+        return {
+            "msg" : "성공적으로 관심 기업이 해제되었습니다."
+        }
+
+# 검색 목록 조회 API (GET)
+# API URL : http://localhost:8000/user/search_history_list
+# 파라미터
+# page | int not null default = 1
+# limit | int not null default = 10
+@router.get("search_history_list")
+def search_history_list(request : Request, page : int = 1, limit : int = 10, db : Session = Depends(get_db)) : 
+    access_token = request.cookies.get("access_token")
+    if not jwt_token_check(access_token) :
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="접근 권한이 없습니다.")
+    else :
+        info = jwt.decode(access_token, SECRET_KEY, algorithms=ALGORITHM)
+        user = users_crud.get_user(db, userid = dict(info)['userid'])
+        start = (page - 1)  * limit
+        total, _history_list = company_crud.search_history_list(db, user_id=user.id, page=start, limit = limit)
+        history_list = []
+        for item in _history_list : 
+            history_list.append({
+                "id" : item[0].id,
+                "user_id" : item[0].user_id,
+                "company_id" : item[0].company_id,
+                "company_name" : item[0].company_name,
+                "start_year" : item[0].start_year,
+                "end_year" : item[0].end_year,
+                "created_at" : item[0].created_at
+            })
+        return {
+            "total" : total,
+            "history_list" : history_list
+        }
+
+# 검색 기록 삭제 API (POSt)
+# API URL : http://localhost:8000/user/remove_search_history
+# 파라미터
+# history_id | int not null
+@router.post("remove_search_history")
+def remove_search_history(request : Request, history_id : int, db : Session = Depends(get_db)) : 
+    access_token = request.cookies.get("access_token")
+    if not jwt_token_check(access_token) :
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="접근 권한이 없습니다.")
+    else :
+        company_crud.delete_search_history(db, history_id)
+        return {
+            "msg" : "해당 검색 기록이 정상적으로 삭제되었습니다."
+        }
+
+# 아이디 찾기 API
+
+
+# 비밀번호 찾기 API
