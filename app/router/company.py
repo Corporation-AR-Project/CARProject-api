@@ -47,7 +47,7 @@ def search_company_keyword(db : Session = Depends(get_db), keyword : str = None)
 # API URL : http://localhost:8000/company/info
 # 파라미터 : name | str , Null not able
 @router.get("/info")
-def company_info(name : str, db : Session = Depends(get_db)) : 
+def company_info(name : str, request : Request, db : Session = Depends(get_db)) : 
     dp = DataProcess()
     data = dp.comapny_info_list(name) # 데이터 가져오기
     company = company_crud.search_company_name_jongmok(db, name)
@@ -56,6 +56,14 @@ def company_info(name : str, db : Session = Depends(get_db)) :
         data['업종코드'] = company.industry_code
         data['업종명'] = company.industry_name
         data['company_id'] = company.id
+
+        access_token = request.cookies.get("access_token")
+        if not access_token == None :
+            info = jwt.decode(access_token, SECRET_KEY, algorithms=ALGORITHM)
+            check = company_crud.check_interest_company(db, user_id=info['id'], company_id=company.id)
+            if check != None :
+                data['interest_id'] = check.id
+
     return {
         "status" : "success",
         "data" : data
