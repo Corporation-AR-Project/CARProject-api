@@ -58,3 +58,11 @@ class LoginToken(BaseModel) :
     id : int # idx
     userid : str # 유저 아이디
 
+# 아이디 찾기
+class FindUserid(BaseModel) : 
+    username : str # 이름
+    useremail : EmailStr # 이메일
+
+# 비밀번호 찾기
+class FindPassword(FindUserid) : 
+    userid : str # 아이디

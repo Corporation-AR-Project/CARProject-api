@@ -1,8 +1,9 @@
 from ..models import Users
-from ..schema.users_schema import UsersCreate, UserInfoUpdate, UserPasswordUpdate
+from ..schema.users_schema import UsersCreate, UserInfoUpdate, UserPasswordUpdate, FindUserid, FindPassword
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from sqlalchemy import update, delete
+import random, string
 
 # 비밀번호 암호화(bcrypt 사용)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -78,3 +79,38 @@ def withdraw_user(db : Session, id : int) :
     )
     db.execute(stmt)
     db.commit()
+
+# 아이디 찾기
+def find_userid(db : Session, _find_userid : FindUserid) :
+    return db.query(Users).filter(
+        Users.username == _find_userid.username,
+        Users.useremail == _find_userid.useremail
+    ).first()
+
+# 비밀번호 찾기 및 설정
+def find_password(db : Session, _find_password : FindPassword) :
+    user = db.query(Users).filter(
+        Users.userid == _find_password.userid,
+        Users.username == _find_password.username,
+        Users.useremail == _find_password.useremail
+    ).first()
+    
+    new_password = ""
+
+    if not user == None : 
+        for i in range(20):
+            new_password += str(random.choice(string.ascii_uppercase + string.digits))
+        
+        stmt = (
+            update(Users)
+            .where(
+                Users.id == user.id
+            )
+            .values(
+                password = pwd_context.hash(new_password)
+            )
+        )
+        db.execute(stmt)
+        db.commit()
+    
+    return new_password

@@ -120,6 +120,7 @@ def info_user(request : Request, db : Session = Depends(get_db)) :
         data = {
             'id' : user.id,
             'userid' : user.userid,
+            'username' : user.username,
             'useremail' : user.useremail,
             'birthday' : user.birthday,
             'gender' : user.gender,
@@ -332,6 +333,32 @@ def remove_search_history(request : Request, history_id : int, db : Session = De
         }
 
 # 아이디 찾기 API
-
+@router.post("find_userid")
+def find_userid(_find_userid : users_schema.FindUserid, db : Session = Depends(get_db)) : 
+    user = users_crud.find_userid(db, _find_userid = _find_userid)
+    result = {
+        "msg" : "해당하는 유저 정보가 없습니다."
+    }
+    
+    if not user == None : 
+        result = {
+            "userid" : user.userid
+        }
+    
+    return result
 
 # 비밀번호 찾기 API
+@router.post("find_password")
+def find_userpw(_find_password : users_schema.FindPassword, db : Session = Depends(get_db)) :
+    new_password = users_crud.find_password(db, _find_password)
+    result = {
+        "msg" : "해당하는 유저 정보가 없습니다."
+    }
+
+    if new_password != "" : 
+        result = {
+            "new_password" : new_password
+        }
+    
+    
+    return result

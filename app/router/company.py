@@ -92,7 +92,8 @@ def company_analyze(request : Request, company_id : str, first_year : int = None
             company_data = company_crud.search_company_year_info(db, company_schema.CompanyYearInfoSearch(company_id=company.id, first_year=str(first_year), last_year=str(last_year), industry_code=None))
             company_info = {
                 "업종" : company.industry_code,
-                "업종명" : company.industry_name
+                "업종명" : company.industry_name,
+                "종목코드" : company.jongmok_code
             }
             for d in company_data : 
                 company_info[d.year] = {
