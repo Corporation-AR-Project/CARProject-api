@@ -66,6 +66,9 @@ pip install python-multipart
 
 # python-jose[cryptography]
 pip install "python-jose[cryptography]"
+
+# sklearn
+pip install -U scikit-learn
 ```
 
 ### Run

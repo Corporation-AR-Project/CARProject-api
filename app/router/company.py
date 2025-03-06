@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Request
 from ..logic.data_process import DataProcess
 from ..logic.calculator import Calculator
 import numpy as np
+import pandas as pd
 from sqlalchemy.orm import Session
 from ..db.database import get_db
 from ..db.crud import company_crud
@@ -10,6 +11,7 @@ from ..db.schema import company_schema
 from jose import jwt
 from dotenv import load_dotenv
 import os
+from sklearn.linear_model import LinearRegression
 
 # env 파일 설정
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -72,7 +74,7 @@ def company_info(name : str, request : Request, db : Session = Depends(get_db)) 
 # 기업 분석 API
 # API URL : http://localhost:8000/company/analyze
 # 파라미터 : 
-# name | str, null not able
+# company_id | str, null not able
 # first_year | int, null able
 # last_year | int, null able
 @router.get("/analyze")
@@ -117,8 +119,9 @@ def company_analyze(request : Request, company_id : str, first_year : int = None
                     "영업이익": d.operating_profit,
                     "순이익": d.net_profit
                 }
+            
 
-            search = company_schema.CompanyYearInfoSearch(company_id=None, first_year=str(first_year-1), last_year=str(last_year), industry_code="262")
+            search = company_schema.CompanyYearInfoSearch(company_id=None, first_year=str(first_year-1), last_year=str(last_year), industry_code=company.industry_code)
             industry_list = company_crud.search_industry_year_info(db, company_year_info_search=search)
             industry_company_list = {}
             for industry in industry_list :
@@ -159,6 +162,79 @@ def company_analyze(request : Request, company_id : str, first_year : int = None
                 }
     
     # 값 반환
+    return {
+        "status" : "success",
+        "data" : result
+    }
+
+# 기업 예측 API
+# API URL : http://localhost:8000/company/prediction
+# 파라미터 
+# company_id | str, null not able
+@router.get("/prediction")
+def company_prediction(company_id : str, db : Session = Depends(get_db)) : 
+    result = {}
+    prediction_years = ['2024', '2025', '2026', '2027', '2028']
+    company = company_crud.search_company_name(db, id=company_id)
+    year_list = company_crud.search_company_year_list(db, company_id=company.id)
+    years = []
+    for item in year_list :
+        years.append(item[0])
+    company_data = company_crud.search_company_year_info(db, company_schema.CompanyYearInfoSearch(company_id=company.id, first_year=str(years[0]), last_year=str(years[len(years)-1]), industry_code=None))
+    years.extend(prediction_years)
+    if '2023' in years : 
+        data = {}
+        for d in company_data : 
+            data[d.year] = {
+                '유동자산' : d.current_assets,
+                '자산총계' : d.total_assets,
+                '유동부채' : d.current_liabilities,
+                '부채총계' : d.total_debt,
+                '자본총계' : d.total_capital,
+                '매출액' : d.revenue,
+                '매출원가' : d.cost_revenue,
+                '매출총이익' : d.total_revenue,
+                '판매비와관리비' : d.expenses,
+                '영업이익' : d.operating_profit,
+                '순이익' : d.net_profit
+            }
+        
+        c_data = company_data_prediction(data, years)
+        c_data['업종'] = company.industry_code
+        c_data['업종명'] = company.industry_name
+        c_data['종목코드'] = company.jongmok_code
+
+        search = company_schema.CompanyYearInfoSearch(company_id=None, first_year=str(2015), last_year=str(2023), industry_code=company.industry_code)
+        industry_list = company_crud.search_industry_year_info(db, company_year_info_search=search)
+        industry_company_list = {}
+        for industry in industry_list :
+            if industry_company_list.get(industry[1]) == None :
+                industry_company_list[industry[1]] = {}
+            industry_company_list[industry[1]][industry[0].year] = {
+                "유동자산": industry[0].current_assets,
+                "자산총계": industry[0].total_assets,
+                "유동부채": industry[0].current_liabilities,
+                "부채총계": industry[0].total_debt,
+                "자본총계": industry[0].total_capital,
+                "매출액": industry[0].revenue,
+                "매출원가": industry[0].cost_revenue,
+                "매출총이익": industry[0].total_revenue,
+                "판매비와관리비": industry[0].expenses,
+                "영업이익": industry[0].operating_profit,
+                "순이익": industry[0].net_profit
+            }
+            
+        c_i_list = {}
+        for i_c_key in industry_company_list.keys() : 
+            i_years = list(industry_company_list[i_c_key].keys())
+            if '2023' in i_years : 
+                i_years.extend(prediction_years)
+                c_i_list[i_c_key] = company_data_prediction(industry_company_list[i_c_key], i_years)
+
+        calc = Calculator()
+        result = calc.calc(prediction_years, c_data, c_i_list)
+
+
     return {
         "status" : "success",
         "data" : result
@@ -246,3 +322,36 @@ def company_db_data_reset(db : Session = Depends(get_db), is_working = None) :
     return {
         "msg" : "DB 입력이 완료되었습니다."
     }
+
+# 값을 배열로 만들어서 반환
+def return_arr(data) :
+    return [int(data)]
+
+# 정해진 년도까지 데이터 예측
+def company_data_prediction(data, years) : 
+    c_data = {}
+    df = pd.DataFrame(data)
+    x_list = list(df.index)
+    make_df = pd.DataFrame()
+    pd.options.display.float_format = '{:.5f}'.format
+    for x in x_list : 
+        d_df = df.loc[x, :]
+        d_df = d_df.dropna()
+
+        get_x = sorted(list(map(return_arr, list(set(years) - set(list(d_df.index)))))) 
+        x_data = list(map(return_arr, list(d_df.index)))
+        y_data = d_df.values
+        reg = LinearRegression()
+        reg.fit(x_data, y_data)
+        y_pred = reg.predict(get_x)
+        idx = 0
+        for y in get_x : 
+            d_df.loc[str(y[0])] = y_pred[idx]
+            idx+=1
+        make_df[x] = d_df
+        for y in list(d_df.index) : 
+            if c_data.get(y) == None : 
+                c_data[y] = {}
+            c_data[y][x] = int(d_df[y])
+    
+    return c_data

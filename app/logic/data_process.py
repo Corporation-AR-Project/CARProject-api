@@ -2,6 +2,7 @@
 from fastapi import Depends
 import json, os, requests, pandas as pd
 from dotenv import load_dotenv
+from sklearn.linear_model import LinearRegression
 
 # env 파일 설정
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

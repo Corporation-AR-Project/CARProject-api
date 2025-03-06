@@ -88,15 +88,15 @@ class Calculator :
                 # 변화율 계산
                 if not one_year_calc_result == {} :
                     # 매출총이익률 ((당해 매출총이익률 - 직전 매출총이익률) / 직전 매출총이익률 * 100)
-                    if calc_result.get("매출총이익률") != None and one_year_calc_result.get("매출총이익률") != None :
+                    if calc_result.get("매출총이익률") != None and one_year_calc_result.get("매출총이익률") != None and one_year_calc_result["매출총이익률"] != 0 :
                         trend_result_list["매출총이익률"].append((calc_result["매출총이익률"] - one_year_calc_result["매출총이익률"]) / one_year_calc_result["매출총이익률"] * 100)
 
                     # 영업이익률 ((당해 영업이익률 - 직전 영업이익률) / 직전 영업이익률 * 100)
-                    if calc_result.get("영업이익률") != None and one_year_calc_result.get("영업이익률") != None :
+                    if calc_result.get("영업이익률") != None and one_year_calc_result.get("영업이익률") != None and one_year_calc_result["영업이익률"] != 0 :
                         trend_result_list["영업이익률"].append((calc_result["영업이익률"] - one_year_calc_result["영업이익률"]) / one_year_calc_result["영업이익률"] * 100)
 
                     # 순이익률 ((당해 순이익률 - 직전 순이익률) / 직전 순이익률 * 100)
-                    if calc_result.get("순이익률") != None and one_year_calc_result.get("순이익률") != None :
+                    if calc_result.get("순이익률") != None and one_year_calc_result.get("순이익률") != None and one_year_calc_result["순이익률"] != 0 :
                         trend_result_list["순이익률"].append((calc_result["순이익률"] - one_year_calc_result["순이익률"]) / one_year_calc_result["순이익률"] * 100)
 
                     # 매출 원가 및 판관비 계산용 변수
@@ -114,20 +114,25 @@ class Calculator :
                         trend_result_list["매출원가및판관비"].append((wonga - last_wonga) / last_wonga * 100)
         # 값 세팅
         type_result = {
-            "평균" : {
+            "평균" : {}, 
+            "중위값" : {},
+            "추세" : {}
+        }
+
+        if not (result_list["매출총이익률"] == [] or result_list["순이익률"] == [] or result_list["영업이익률"] == [] or result_list["매출원가및판관비"] == []) :
+            type_result["평균"] = {
                 "매출총이익률" : round(np.mean(result_list["매출총이익률"]), 2),
                 "영업이익률" : round(np.mean(result_list["영업이익률"]), 2),
                 "순이익률" : round(np.mean(result_list["순이익률"]), 2),
                 "매출원가및판관비" : round(np.mean(result_list["매출원가및판관비"])),
-            }, 
-            "중위값" : {
+            }
+
+            type_result["중위값"] = {
                 "매출총이익률" : round(np.median(result_list["매출총이익률"]), 2),
                 "영업이익률" : round(np.median(result_list["영업이익률"]), 2),
                 "순이익률" : round(np.median(result_list["순이익률"]), 2),
                 "매출원가및판관비" : round(np.median(result_list["매출원가및판관비"])),
-            },
-            "추세" : {}
-        }
+            }
 
         # 변화율 항목이 전부 빈 값이 아니면 추세 데이터 생성
         if not (trend_result_list["매출총이익률"] == [] or trend_result_list["순이익률"] == [] or trend_result_list["영업이익률"] == [] or trend_result_list["매출원가및판관비"] == []) :
