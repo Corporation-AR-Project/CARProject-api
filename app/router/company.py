@@ -11,7 +11,10 @@ from ..db.schema import company_schema
 from jose import jwt
 from dotenv import load_dotenv
 import os
-from sklearn.linear_model import LinearRegression
+from statsmodels.tsa.arima.model import ARIMA
+import pmdarima as pm
+import warnings
+warnings.filterwarnings("ignore")
 
 # env 파일 설정
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -173,7 +176,9 @@ def company_analyze(request : Request, company_id : str, first_year : int = None
 # company_id | str, null not able
 @router.get("/prediction")
 def company_prediction(company_id : str, db : Session = Depends(get_db)) : 
-    result = {}
+    result = {
+        "msg" : "예측이 불가능합니다."
+    }
     prediction_years = ['2024', '2025', '2026', '2027', '2028']
     company = company_crud.search_company_name(db, id=company_id)
     year_list = company_crud.search_company_year_list(db, company_id=company.id)
@@ -181,7 +186,7 @@ def company_prediction(company_id : str, db : Session = Depends(get_db)) :
     for item in year_list :
         years.append(item[0])
     company_data = company_crud.search_company_year_info(db, company_schema.CompanyYearInfoSearch(company_id=company.id, first_year=str(years[0]), last_year=str(years[len(years)-1]), industry_code=None))
-    years.extend(prediction_years)
+    # years.extend(prediction_years)
     if '2023' in years : 
         data = {}
         for d in company_data : 
@@ -203,36 +208,39 @@ def company_prediction(company_id : str, db : Session = Depends(get_db)) :
         c_data['업종'] = company.industry_code
         c_data['업종명'] = company.industry_name
         c_data['종목코드'] = company.jongmok_code
+        
+        if c_data != {} :
+            search = company_schema.CompanyYearInfoSearch(company_id=None, first_year=str(2015), last_year=str(2023), industry_code=company.industry_code)
+            industry_list = company_crud.search_industry_year_info(db, company_year_info_search=search)
+            industry_company_list = {}
+            for industry in industry_list :
+                if industry_company_list.get(industry[1]) == None :
+                    industry_company_list[industry[1]] = {}
+                industry_company_list[industry[1]][industry[0].year] = {
+                    "유동자산": industry[0].current_assets,
+                    "자산총계": industry[0].total_assets,
+                    "유동부채": industry[0].current_liabilities,
+                    "부채총계": industry[0].total_debt,
+                    "자본총계": industry[0].total_capital,
+                    "매출액": industry[0].revenue,
+                    "매출원가": industry[0].cost_revenue,
+                    "매출총이익": industry[0].total_revenue,
+                    "판매비와관리비": industry[0].expenses,
+                    "영업이익": industry[0].operating_profit,
+                    "순이익": industry[0].net_profit
+                }
+                
+            c_i_list = {}
+            for i_c_key in industry_company_list.keys() : 
+                i_years = list(industry_company_list[i_c_key].keys())
+                if '2023' in i_years : 
+                    i_years.extend(prediction_years)
+                    data = company_data_prediction(industry_company_list[i_c_key], i_years)
+                    if data != {} : 
+                        c_i_list[i_c_key] = data
 
-        search = company_schema.CompanyYearInfoSearch(company_id=None, first_year=str(2015), last_year=str(2023), industry_code=company.industry_code)
-        industry_list = company_crud.search_industry_year_info(db, company_year_info_search=search)
-        industry_company_list = {}
-        for industry in industry_list :
-            if industry_company_list.get(industry[1]) == None :
-                industry_company_list[industry[1]] = {}
-            industry_company_list[industry[1]][industry[0].year] = {
-                "유동자산": industry[0].current_assets,
-                "자산총계": industry[0].total_assets,
-                "유동부채": industry[0].current_liabilities,
-                "부채총계": industry[0].total_debt,
-                "자본총계": industry[0].total_capital,
-                "매출액": industry[0].revenue,
-                "매출원가": industry[0].cost_revenue,
-                "매출총이익": industry[0].total_revenue,
-                "판매비와관리비": industry[0].expenses,
-                "영업이익": industry[0].operating_profit,
-                "순이익": industry[0].net_profit
-            }
-            
-        c_i_list = {}
-        for i_c_key in industry_company_list.keys() : 
-            i_years = list(industry_company_list[i_c_key].keys())
-            if '2023' in i_years : 
-                i_years.extend(prediction_years)
-                c_i_list[i_c_key] = company_data_prediction(industry_company_list[i_c_key], i_years)
-
-        calc = Calculator()
-        result = calc.calc(prediction_years, c_data, c_i_list)
+            calc = Calculator()
+            result = calc.calc(prediction_years, c_data, c_i_list)
 
 
     return {
@@ -330,28 +338,128 @@ def return_arr(data) :
 # 정해진 년도까지 데이터 예측
 def company_data_prediction(data, years) : 
     c_data = {}
+    pd.options.display.float_format = '{:.5f}'.format
     df = pd.DataFrame(data)
     x_list = list(df.index)
-    make_df = pd.DataFrame()
-    pd.options.display.float_format = '{:.5f}'.format
     for x in x_list : 
-        d_df = df.loc[x, :]
-        d_df = d_df.dropna()
+    #     d_df = df.loc[x, :]
+    #     d_df = d_df.dropna()
 
-        get_x = sorted(list(map(return_arr, list(set(years) - set(list(d_df.index)))))) 
-        x_data = list(map(return_arr, list(d_df.index)))
-        y_data = d_df.values
-        reg = LinearRegression()
-        reg.fit(x_data, y_data)
-        y_pred = reg.predict(get_x)
-        idx = 0
-        for y in get_x : 
-            d_df.loc[str(y[0])] = y_pred[idx]
-            idx+=1
-        make_df[x] = d_df
-        for y in list(d_df.index) : 
-            if c_data.get(y) == None : 
-                c_data[y] = {}
-            c_data[y][x] = int(d_df[y])
+    #     get_x = list(map(return_arr, list(d_df.index)))
+    #     scaler = StandardScaler()
+    #     X_scaled = scaler.fit_transform(get_x)
+    #     y = d_df.values
+
+    #    # 훈련 데이터와 테스트 데이터로 분할
+    #     # X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.3, random_state=42)
+
+    #     # 릿지 회귀 모델 정의
+    #     ridge_model = Ridge(alpha=1.0)  # alpha는 정규화 강도
+
+    #     # 모델 학습
+    #     ridge_model.fit(X_scaled, y)
+
+    #     get_x = sorted(list(set(years) - set(list(d_df.index))))
+    #     print(get_x)
+
+    #     future_years = pd.DataFrame({'Year': get_x})
+
+    #     # 연도 데이터 표준화
+    #     future_years_scaled = scaler.transform(future_years)
+
+    #     # 2024~2028년 자산 변화량 예측
+    #     future_predictions = ridge_model.predict(future_years_scaled)
+    #     print(future_predictions)
+
+    #     for year, pred in zip(future_years['Year'], future_predictions):
+    #         d_df.loc[str(year)] = pred
+        
+    #     for y in list(d_df.index) : 
+    #         if c_data.get(y) == None : 
+    #             c_data[y] = {}
+    #         c_data[y][x] = int(d_df[y])
+
+
+        # 모델 성능 평가
+        # mse = mean_squared_error(y_test, y_pred)
+        # r2 = r2_score(y_test, y_pred)
+
+        # 결과 출력
+        # print(f"릿지 회귀 모델 성능:")
+        # print(f"평균 제곱 오차(MSE): {mse}")
+        # print(f"R² (결정 계수): {r2}")
+        # print("\n회귀 계수:")
+        # print(ridge_model.coef_)
+
+        try :
+            d_df = df.loc[x, :]
+            d_df = d_df.dropna()
+
+            d_df.index = pd.date_range(start=d_df.index[0], periods=len(d_df), freq='YE')
+
+            q1 = d_df.quantile(0.25)  # 1사분위수
+            q3 = d_df.quantile(0.75)  # 3사분위수
+            iqr = q3 - q1  # IQR
+
+            # 이상치 경계 설정
+            lower_bound = q1 - 1.5 * iqr  # 하한
+            upper_bound = q3 + 1.5 * iqr  # 상한
+
+            # 이상치 제거 (하한과 상한을 벗어나는 값 제거)
+            d_df = d_df[(d_df >= lower_bound) & (d_df <= upper_bound)]
+
+            indexs = list(d_df.index)
+
+            # model = pm.auto_arima(d_df, seasonal=False, stepwise=True, trace=True)
+
+            model = ARIMA(d_df, order=(1, 1, 1))
+            model_fit = model.fit()
+
+            step = 2028 - int(indexs[len(indexs) - 1].year)
+            # forecast = model.predict(n_periods=step)
+
+            forecast = model_fit.forecast(steps=step)
+
+            merge_data = pd.concat([d_df, forecast])
+
+            add_index = pd.date_range(start="2024", periods=step, freq='YE')
+            indexs.extend(add_index)
+
+            merge_data.index = indexs
+
+
+            for y in list(range(2023, 2029)) : 
+                key = str(y) + "-12-31"
+                if c_data.get(str(y)) == None : 
+                    c_data[str(y)] = {}
+                c_data[str(y)][x] = int(merge_data[key])
+        except Exception as e :
+            # print(e)
+            pass
+
+
+    # df = pd.DataFrame(data)
+    # x_list = list(df.index)
+    # make_df = pd.DataFrame()
+    # pd.options.display.float_format = '{:.5f}'.format
+    # for x in x_list : 
+    #     d_df = df.loc[x, :]
+    #     d_df = d_df.dropna()
+
+    #     get_x = sorted(list(map(return_arr, list(set(years) - set(list(d_df.index)))))) 
+    #     x_data = list(map(return_arr, list(d_df.index)))
+    #     y_data = d_df.values
+    #     reg = LinearRegression()
+    #     reg.fit(x_data, y_data)
+    #     y_pred = reg.predict(get_x)
+    #     idx = 0
+    #     for y in get_x : 
+    #         d_df.loc[str(y[0])] = y_pred[idx]
+    #         idx+=1
+    #     make_df[x] = d_df
+    #     for y in list(d_df.index) : 
+    #         if c_data.get(y) == None : 
+    #             c_data[y] = {}
+    #         c_data[y][x] = int(d_df[y])
     
     return c_data

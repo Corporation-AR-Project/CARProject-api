@@ -152,22 +152,22 @@ class Calculator :
 
         # 계산
         # 유동비율 계산 (유동자산 / 유동부채 * 100)
-        if data.get("유동자산") != None and data.get("유동부채") != None : 
+        if data.get("유동자산") != None and data.get("유동부채") != None and data["유동부채"] != 0 : 
             calc_result["유동비율"] = round(data["유동자산"] / data["유동부채"] * 100, 2)
         # 부채비율 계산 (부채총계 / 자본총계 * 100)
-        if data.get("부채총계") != None and data.get("자본총계") != None :
+        if data.get("부채총계") != None and data.get("자본총계") != None and data["자본총계"] != 0 :
             calc_result["부채비율"] = round(data["부채총계"] / data["자본총계"] * 100, 2)
         # 자본총계 계산 (자본총계 / 자산총계 * 100)
-        if data.get("자본총계") != None and data.get("자산총계") != None : 
+        if data.get("자본총계") != None and data.get("자산총계") != None and data["자산총계"] != 0 : 
             calc_result["자기자본비율"] = round(data["자본총계"] / data["자산총계"] * 100, 2)
         # 매출총이익률 계산 (매출총이익 / 매출액 * 100)
-        if data.get("매출총이익") != None and data.get("매출액") != None :
+        if data.get("매출총이익") != None and data.get("매출액") != None and data["매출액"] != 0 :
             calc_result["매출총이익률"] = round(data["매출총이익"] / data["매출액"] * 100, 2)
         # 영업이익 계산 (영업이익 / 매출액 * 100)
-        if data.get("영업이익") != None and data.get("매출액") != None :
+        if data.get("영업이익") != None and data.get("매출액") != None and data["매출액"] != 0 :
             calc_result["영업이익률"] = round(data["영업이익"] / data["매출액"] * 100, 2)
         # 순이익률 계산 (순이익 / 매출액 * 100)
-        if data.get("순이익") != None and data.get("매출액") != None :
+        if data.get("순이익") != None and data.get("매출액") != None and data["매출액"] != 0 :
             calc_result["순이익률"] = round(data["순이익"] / data["매출액"] * 100, 2)
 
         return calc_result
