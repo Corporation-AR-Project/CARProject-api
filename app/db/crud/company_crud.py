@@ -2,6 +2,7 @@ from ..models import Company, CompanyYearInfo, SearchHistory, InteresetCompany
 from ..schema.company_schema import CompanyCreate, CompanyInfoCreate, CompanyUpdate, CompanyInfoUpdate, CompanyYearInfoSearch, CompanyHistory, InterestCompanyCreate
 from sqlalchemy.orm import Session
 from sqlalchemy import update, delete
+from sqlalchemy.sql import func
 
 # 기업 생성
 def create_company(db : Session, company_create : CompanyCreate) :
@@ -181,3 +182,10 @@ def search_interest_list(db : Session, user_id : int, page : int = 0, limit : in
     interest_list = _interest_list.offset(page).limit(limit).all()
 
     return total, interest_list
+
+# 년도 시작/끝 값 알아오기
+def max_min_years(db : Session) :
+    return db.query(
+        func.min(CompanyYearInfo.year).label("min_year"),
+        func.max(CompanyYearInfo.year).label("max_year")
+    ).all()

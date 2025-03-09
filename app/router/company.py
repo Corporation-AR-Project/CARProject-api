@@ -12,9 +12,9 @@ from jose import jwt
 from dotenv import load_dotenv
 import os
 from statsmodels.tsa.arima.model import ARIMA
-import pmdarima as pm
 import warnings
-warnings.filterwarnings("ignore")
+
+warnings.filterwarnings("ignore") # warning 에러 안보이게 처리
 
 # env 파일 설정
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -82,75 +82,57 @@ def company_info(name : str, request : Request, db : Session = Depends(get_db)) 
 # last_year | int, null able
 @router.get("/analyze")
 def company_analyze(request : Request, company_id : str, first_year : int = None, last_year : int = None, db : Session = Depends(get_db)) :
-    calc = Calculator()
-    company = company_crud.search_company_name(db, id=company_id)
-    year_list = company_crud.search_company_year_list(db, company_id=company.id)
-    l = []
-    for item in year_list :
-        l.append(item[0])
+    calc = Calculator() # 계산용 class 생성
+    company = company_crud.search_company_name(db, id=company_id) # 기업 정보 불러오기
+    year_list = company_crud.search_company_year_list(db, company_id=company.id) # 년도 목록 원본 불러오기
+    l = list(item[0] for item in year_list) # 년도 목록 생성
         
     # year 입력값 없는 경우
     if  first_year == None or last_year == None :
-        result = l
-    else : 
+        result = l # 년도 목록 result 값으로 지정
+    else : # year 입력값이 잇으면
         # 입력받은 year로 list 생성
         year_list = list(map(str, list(np.arange(first_year, last_year + 1, 1))))
 
         # year_list가 6 이상이거나 0 이하 이면
         if len(year_list) >= 6 or len(year_list) <= 0 :
-            result = {
-                "msg" : "잘못된 year_list 입니다."
-            }
+            result = { "msg" : "잘못된 year_list 입니다." } # 에러 띄우기
         else : # 문제 없는 경우
-            company_data = company_crud.search_company_year_info(db, company_schema.CompanyYearInfoSearch(company_id=company.id, first_year=str(first_year), last_year=str(last_year), industry_code=None))
+            # 해당 기업의 year 범위 내 재무 정보 목록 가져오기
+            schema = company_schema.CompanyYearInfoSearch(company_id=company.id, first_year=str(first_year), last_year=str(last_year), industry_code=None)
+            company_data = company_crud.search_company_year_info(db, schema)
             company_info = {
                 "업종" : company.industry_code,
                 "업종명" : company.industry_name,
                 "종목코드" : company.jongmok_code
             }
-            for d in company_data : 
-                company_info[d.year] = {
-                    "유동자산": d.current_assets,
-                    "자산총계": d.total_assets,
-                    "유동부채": d.current_liabilities,
-                    "부채총계": d.total_debt,
-                    "자본총계": d.total_capital,
-                    "매출액": d.revenue,
-                    "매출원가": d.cost_revenue,
-                    "매출총이익": d.total_revenue,
-                    "판매비와관리비": d.expenses,
-                    "영업이익": d.operating_profit,
-                    "순이익": d.net_profit
-                }
-            
 
-            search = company_schema.CompanyYearInfoSearch(company_id=None, first_year=str(first_year-1), last_year=str(last_year), industry_code=company.industry_code)
-            industry_list = company_crud.search_industry_year_info(db, company_year_info_search=search)
-            industry_company_list = {}
+            # 가져온거 세팅            
+            for c_d in company_data : 
+                year, d = finance_data_to_dict(c_d) # DB 모델 dict로 변환
+                company_info[year] = d # 세팅
+            
+            # 동일 업종 목록 가져오기
+            search_schema = company_schema.CompanyYearInfoSearch(company_id=None, first_year=str(first_year-1), last_year=str(last_year), industry_code=company.industry_code)
+            industry_list = company_crud.search_industry_year_info(db, company_year_info_search=search_schema)
+            industry_company_list = {} # 목록용 dict 생성
+            # for 문으로 돌리기
             for industry in industry_list :
-                if industry_company_list.get(industry[1]) == None :
-                    industry_company_list[industry[1]] = {}
-                industry_company_list[industry[1]][industry[0].year] = {
-                    "유동자산": industry[0].current_assets,
-                    "자산총계": industry[0].total_assets,
-                    "유동부채": industry[0].current_liabilities,
-                    "부채총계": industry[0].total_debt,
-                    "자본총계": industry[0].total_capital,
-                    "매출액": industry[0].revenue,
-                    "매출원가": industry[0].cost_revenue,
-                    "매출총이익": industry[0].total_revenue,
-                    "판매비와관리비": industry[0].expenses,
-                    "영업이익": industry[0].operating_profit,
-                    "순이익": industry[0].net_profit
-                }
+                name = industry[1] # 기업 이름
+                year, d = finance_data_to_dict(industry[0]) # 년도랑 해당 년도 정보
+                if industry_company_list.get(name) == None : # 해당 기업이 없으면 
+                    industry_company_list[name] = {} # 생성하고
+                industry_company_list[name][year] = d # 해당 정보 dict에 넣기
             
             # 실제로 계산 가능한지 확인
-            if set(year_list).issubset(set(l)) :
+            if set(year_list).issubset(set(l)) : # 뽑아온 년도 목록안에 해당 년도가 있는지 확인
                 result = calc.calc(year_list, company_info, industry_company_list) # 문제 없으면 계산
 
-                access_token = request.cookies.get("access_token")
-                if not access_token == None :
-                    info = jwt.decode(access_token, SECRET_KEY, algorithms=ALGORITHM)
+                # 검색 기록 설정
+                access_token = request.cookies.get("access_token") # access_token 가져와서
+                if not access_token == None : # 만약 로그인 했다면
+                    info = jwt.decode(access_token, SECRET_KEY, algorithms=ALGORITHM) # 해당 정보 가져와서
+                    # search_history 생성
                     company_crud.create_search_history(db, company_schema.CompanyHistory(
                         user_id=info['id'],
                         company_id=company.id,
@@ -160,9 +142,7 @@ def company_analyze(request : Request, company_id : str, first_year : int = None
                     ))
 
             else : # 계산 불가능하면 검색 결과 없다고 뜨게
-                result = {
-                    "msg" : "검색결과 없습니다."
-                }
+                result = { "msg" : "검색결과 없습니다." }
     
     # 값 반환
     return {
@@ -176,73 +156,64 @@ def company_analyze(request : Request, company_id : str, first_year : int = None
 # company_id | str, null not able
 @router.get("/prediction")
 def company_prediction(company_id : str, db : Session = Depends(get_db)) : 
-    result = {
-        "msg" : "예측이 불가능합니다."
-    }
-    prediction_years = ['2024', '2025', '2026', '2027', '2028']
-    company = company_crud.search_company_name(db, id=company_id)
-    year_list = company_crud.search_company_year_list(db, company_id=company.id)
-    years = []
-    for item in year_list :
-        years.append(item[0])
-    company_data = company_crud.search_company_year_info(db, company_schema.CompanyYearInfoSearch(company_id=company.id, first_year=str(years[0]), last_year=str(years[len(years)-1]), industry_code=None))
-    # years.extend(prediction_years)
-    if '2023' in years : 
-        data = {}
-        for d in company_data : 
-            data[d.year] = {
-                '유동자산' : d.current_assets,
-                '자산총계' : d.total_assets,
-                '유동부채' : d.current_liabilities,
-                '부채총계' : d.total_debt,
-                '자본총계' : d.total_capital,
-                '매출액' : d.revenue,
-                '매출원가' : d.cost_revenue,
-                '매출총이익' : d.total_revenue,
-                '판매비와관리비' : d.expenses,
-                '영업이익' : d.operating_profit,
-                '순이익' : d.net_profit
-            }
-        
-        c_data = company_data_prediction(data, years)
+    # 실패용 결과값 미리 준비
+    result = { "msg" : "예측이 불가능합니다." }
+    
+    min_year, max_year = company_crud.max_min_years(db)[0] # db 전체 가장 최근/옛날 년도 가져오기
+    prediction_years = list(map(str, list(np.arange(int(max_year) + 1, int(max_year) + 6, 1)))) # 예측치 뽑아낼 년도 목록 뽑기(가장 최근 년도 + 1 한 년도부터 5개년치)
+    company = company_crud.search_company_name(db, id=company_id) # 검색한 기업 정보 불러오기
+    year_list = company_crud.search_company_year_list(db, company_id=company.id) # 년도 목록 원본 불러오기
+    years = list(item[0] for item in year_list) # 년도만 뽑아냄
+
+    # 검색해서 해당 기업의 재무 데이터 가져오기
+    schema = company_schema.CompanyYearInfoSearch(company_id=company.id, first_year=str(years[0]), last_year=str(years[len(years)-1]), industry_code=None)
+    company_data = company_crud.search_company_year_info(db, schema)
+
+    # 가장 최근 년도 데이터가 없다면 진행하지 않음(이미 폐업했거나 예측할 필요 없는 기업이라고 판단)
+    if max_year in years : 
+        c_data = {} # 데이터 담을 dict
+        # company_data 가져와서 for문으로 돌리기
+        for c_d in company_data : 
+            year, d = finance_data_to_dict(c_d) # DB 모델 dict로 형변환
+            c_data[year] = d # c_data 안에 넣기
+
+        # max_year 부터 예상 5개년치 뽑기
+        c_data = company_data_prediction(c_data, int(max_year), int(max_year) + 5) 
+        # 기타 기업 정보 넣기
         c_data['업종'] = company.industry_code
         c_data['업종명'] = company.industry_name
         c_data['종목코드'] = company.jongmok_code
         
+        # 값이 다 있다면 동일 업종 목록도 뽑기
         if c_data != {} :
-            search = company_schema.CompanyYearInfoSearch(company_id=None, first_year=str(2015), last_year=str(2023), industry_code=company.industry_code)
-            industry_list = company_crud.search_industry_year_info(db, company_year_info_search=search)
+            # search용 schema 생성
+            search_schema = company_schema.CompanyYearInfoSearch(company_id=None, first_year=min_year, last_year=max_year, industry_code=company.industry_code)
+            # DB에서 목록 뽑아내기
+            industry_list = company_crud.search_industry_year_info(db, company_year_info_search=search_schema)
+            # 동일업종 목록용 dict 생성
             industry_company_list = {}
+            # for 문 돌려서
             for industry in industry_list :
-                if industry_company_list.get(industry[1]) == None :
-                    industry_company_list[industry[1]] = {}
-                industry_company_list[industry[1]][industry[0].year] = {
-                    "유동자산": industry[0].current_assets,
-                    "자산총계": industry[0].total_assets,
-                    "유동부채": industry[0].current_liabilities,
-                    "부채총계": industry[0].total_debt,
-                    "자본총계": industry[0].total_capital,
-                    "매출액": industry[0].revenue,
-                    "매출원가": industry[0].cost_revenue,
-                    "매출총이익": industry[0].total_revenue,
-                    "판매비와관리비": industry[0].expenses,
-                    "영업이익": industry[0].operating_profit,
-                    "순이익": industry[0].net_profit
-                }
-                
+                name = industry[1] # 기업 이름 건지고
+                year, d = finance_data_to_dict(industry[0]) # 해당 년도 재무 정보 dict로 변환
+                if industry_company_list.get(name) == None : # 목록 내에 이름이 없으면 생성
+                    industry_company_list[name] = {}
+                industry_company_list[name][year] = d # 해당 내용 dict에 추가
+            
+            # 동일 업종 예측치 목록 뽑아내기
             c_i_list = {}
             for i_c_key in industry_company_list.keys() : 
-                i_years = list(industry_company_list[i_c_key].keys())
-                if '2023' in i_years : 
-                    i_years.extend(prediction_years)
-                    data = company_data_prediction(industry_company_list[i_c_key], i_years)
-                    if data != {} : 
-                        c_i_list[i_c_key] = data
+                i_years = list(industry_company_list[i_c_key].keys()) # 해당 기업의 년도 목록 봅아서
+                if max_year in i_years : # max_year가 있는지 검사
+                    data = company_data_prediction(industry_company_list[i_c_key], int(max_year), int(max_year) + 5) # 있다면 예측치 데이터 생성
+                    if data != {} : # 예측치 데이터가 빈값이 아니라면
+                        c_i_list[i_c_key] = data # 목록에 넣기
 
+            # 계산용 class 불러와서
             calc = Calculator()
-            result = calc.calc(prediction_years, c_data, c_i_list)
+            result = calc.calc(prediction_years, c_data, c_i_list) # result에 계산 값 넣기
 
-
+    # 결과값 반환
     return {
         "status" : "success",
         "data" : result
@@ -331,66 +302,24 @@ def company_db_data_reset(db : Session = Depends(get_db), is_working = None) :
         "msg" : "DB 입력이 완료되었습니다."
     }
 
-# 값을 배열로 만들어서 반환
-def return_arr(data) :
-    return [int(data)]
+
+# 재무 정보 model > dict 변환
+def finance_data_to_dict(data) :
+    # dict key 전환용
+    transe_key = {"_sa_instance_state" : "_del", "company_id" :"_del", "year" :"year", "is_visible" : "_del", "id" :"_del", "current_assets" : "유동자산", "total_assets" : "자산총계", "current_liabilities" : "유동부채", "total_debt" : "부채총계", "total_capital" : "자본총계", "revenue" : "매출액", "cost_revenue" : "매출원가", "total_revenue" : "매출총이익", "expenses" : "판매비와관리비", "operating_profit" : "영업이익", "net_profit" : "순이익"}
+    d = dict((transe_key[key], value) for (key, value) in data.__dict__.items())
+    year = d['year']
+    del d['year']
+    del d['_del']
+    return year, d
+
 
 # 정해진 년도까지 데이터 예측
-def company_data_prediction(data, years) : 
+def company_data_prediction(data, start_year, end_year) : 
     c_data = {}
     pd.options.display.float_format = '{:.5f}'.format
     df = pd.DataFrame(data)
-    x_list = list(df.index)
-    for x in x_list : 
-    #     d_df = df.loc[x, :]
-    #     d_df = d_df.dropna()
-
-    #     get_x = list(map(return_arr, list(d_df.index)))
-    #     scaler = StandardScaler()
-    #     X_scaled = scaler.fit_transform(get_x)
-    #     y = d_df.values
-
-    #    # 훈련 데이터와 테스트 데이터로 분할
-    #     # X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.3, random_state=42)
-
-    #     # 릿지 회귀 모델 정의
-    #     ridge_model = Ridge(alpha=1.0)  # alpha는 정규화 강도
-
-    #     # 모델 학습
-    #     ridge_model.fit(X_scaled, y)
-
-    #     get_x = sorted(list(set(years) - set(list(d_df.index))))
-    #     print(get_x)
-
-    #     future_years = pd.DataFrame({'Year': get_x})
-
-    #     # 연도 데이터 표준화
-    #     future_years_scaled = scaler.transform(future_years)
-
-    #     # 2024~2028년 자산 변화량 예측
-    #     future_predictions = ridge_model.predict(future_years_scaled)
-    #     print(future_predictions)
-
-    #     for year, pred in zip(future_years['Year'], future_predictions):
-    #         d_df.loc[str(year)] = pred
-        
-    #     for y in list(d_df.index) : 
-    #         if c_data.get(y) == None : 
-    #             c_data[y] = {}
-    #         c_data[y][x] = int(d_df[y])
-
-
-        # 모델 성능 평가
-        # mse = mean_squared_error(y_test, y_pred)
-        # r2 = r2_score(y_test, y_pred)
-
-        # 결과 출력
-        # print(f"릿지 회귀 모델 성능:")
-        # print(f"평균 제곱 오차(MSE): {mse}")
-        # print(f"R² (결정 계수): {r2}")
-        # print("\n회귀 계수:")
-        # print(ridge_model.coef_)
-
+    for x in list(df.index) : 
         try :
             d_df = df.loc[x, :]
             d_df = d_df.dropna()
@@ -410,56 +339,25 @@ def company_data_prediction(data, years) :
 
             indexs = list(d_df.index)
 
-            # model = pm.auto_arima(d_df, seasonal=False, stepwise=True, trace=True)
-
             model = ARIMA(d_df, order=(1, 1, 1))
             model_fit = model.fit()
 
-            step = 2028 - int(indexs[len(indexs) - 1].year)
-            # forecast = model.predict(n_periods=step)
-
+            step = end_year - int(indexs[len(indexs) - 1].year)
             forecast = model_fit.forecast(steps=step)
-
             merge_data = pd.concat([d_df, forecast])
 
-            add_index = pd.date_range(start="2024", periods=step, freq='YE')
+            add_index = pd.date_range(start=str(start_year+1), periods=step, freq='YE')
             indexs.extend(add_index)
-
             merge_data.index = indexs
 
-
-            for y in list(range(2023, 2029)) : 
-                key = str(y) + "-12-31"
-                if c_data.get(str(y)) == None : 
-                    c_data[str(y)] = {}
-                c_data[str(y)][x] = int(merge_data[key])
+            for year in range(start_year, end_year+1) : 
+                year = str(year)
+                key = year + "-12-31"
+                if c_data.get(year) == None : 
+                    c_data[year] = {}
+                c_data[year][x] = int(merge_data[key])
         except Exception as e :
             # print(e)
             pass
 
-
-    # df = pd.DataFrame(data)
-    # x_list = list(df.index)
-    # make_df = pd.DataFrame()
-    # pd.options.display.float_format = '{:.5f}'.format
-    # for x in x_list : 
-    #     d_df = df.loc[x, :]
-    #     d_df = d_df.dropna()
-
-    #     get_x = sorted(list(map(return_arr, list(set(years) - set(list(d_df.index)))))) 
-    #     x_data = list(map(return_arr, list(d_df.index)))
-    #     y_data = d_df.values
-    #     reg = LinearRegression()
-    #     reg.fit(x_data, y_data)
-    #     y_pred = reg.predict(get_x)
-    #     idx = 0
-    #     for y in get_x : 
-    #         d_df.loc[str(y[0])] = y_pred[idx]
-    #         idx+=1
-    #     make_df[x] = d_df
-    #     for y in list(d_df.index) : 
-    #         if c_data.get(y) == None : 
-    #             c_data[y] = {}
-    #         c_data[y][x] = int(d_df[y])
-    
     return c_data
