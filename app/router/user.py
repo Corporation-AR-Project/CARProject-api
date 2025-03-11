@@ -74,10 +74,8 @@ def login_user(response: Response, form_data : OAuth2PasswordRequestForm = Depen
 
     # access token 생성
     access_token = jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
-    
     # 쿠키에 저장
     response.set_cookie(key="access_token", value=access_token, expires=ACCESS_TOKEN_EXPIRE_MINUTES, httponly=True)
-
     # 결과값 반환
     return {
         "access_token": access_token,
@@ -103,9 +101,7 @@ def isLogin_check(request : Request) :
     if not access_token == None :
         is_login = True
         
-    return {
-        "is_login" : is_login
-    }
+    return { "is_login" : is_login }
 
 # 회원 정보 조회 API (GET)
 # API URL : http://localhost:8000/user/info
@@ -146,7 +142,6 @@ def modify_user(_user_update : users_schema.UserInfoUpdate, request : Request, r
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="접근 권한이 없습니다.")
     else : 
         users_crud.update_user(db, user_update=_user_update)
-
         user = users_crud.get_user_id(db, id = _user_update.id)
         # 제한시간 등 정보 생성
         data = {
@@ -156,10 +151,8 @@ def modify_user(_user_update : users_schema.UserInfoUpdate, request : Request, r
             "iat" : datetime.utcnow(),
             "exp" : datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         }
-
         # access token 생성
         access_token = jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
-        
         # 쿠키에 저장
         response.set_cookie(key="access_token", value=access_token, expires=ACCESS_TOKEN_EXPIRE_MINUTES, httponly=True)
 
@@ -227,7 +220,7 @@ def userid_duplicateCheck(userid : str, db : Session = Depends(get_db)) :
 # 파라미터
 # page | int not null default = 1
 # limit | int not null default = 10
-@router.get("interest_company_list")
+@router.get("/interest_company_list")
 def search_interest_company_list(request : Request, page : int = 1, limit : int = 10, db : Session = Depends(get_db)) :
     access_token = request.cookies.get("access_token")
     if not jwt_token_check(access_token) :
@@ -256,7 +249,7 @@ def search_interest_company_list(request : Request, page : int = 1, limit : int 
 # API URL : http://localhost:8000/user/add_interest_company
 # 파라미터
 # company_id | int not null
-@router.post("add_interest_company", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/add_interest_company", status_code=status.HTTP_202_ACCEPTED)
 def create_interest_company(request : Request, company_id : int, db : Session = Depends(get_db)) :
     access_token = request.cookies.get("access_token")
     if not jwt_token_check(access_token) :
@@ -265,33 +258,27 @@ def create_interest_company(request : Request, company_id : int, db : Session = 
         info = jwt.decode(access_token, SECRET_KEY, algorithms=ALGORITHM)
         user = users_crud.get_user(db, userid = dict(info)['userid'])
         company_crud.create_interest_company(db, company_schema.InterestCompanyCreate(user_id = user.id, company_id=company_id))
-
-        return {
-            "msg" : "성공적으로 관심 기업이 등록되었습니다."
-        }
+        return { "msg" : "성공적으로 관심 기업이 등록되었습니다." }
 
 # 관심 기업 해제 API (POST)
 # API URL : http://localhost:8000/user/remove_interest_company
 # 파라미터
 # interest_id | int not null
-@router.post("remove_interest_company")
+@router.post("/remove_interest_company")
 def delete_interest_company(request : Request, interest_id : int, db : Session = Depends(get_db)) :
     access_token = request.cookies.get("access_token")
     if not jwt_token_check(access_token) :
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="접근 권한이 없습니다.")
     else :
         company_crud.delete_interest_company(db, interest_id)
-
-        return {
-            "msg" : "성공적으로 관심 기업이 해제되었습니다."
-        }
+        return { "msg" : "성공적으로 관심 기업이 해제되었습니다." }
 
 # 검색 목록 조회 API (GET)
 # API URL : http://localhost:8000/user/search_history_list
 # 파라미터
 # page | int not null default = 1
 # limit | int not null default = 10
-@router.get("search_history_list")
+@router.get("/search_history_list")
 def search_history_list(request : Request, page : int = 1, limit : int = 10, db : Session = Depends(get_db)) : 
     access_token = request.cookies.get("access_token")
     if not jwt_token_check(access_token) :
@@ -303,14 +290,15 @@ def search_history_list(request : Request, page : int = 1, limit : int = 10, db 
         total, _history_list = company_crud.search_history_list(db, user_id=user.id, page=start, limit = limit)
         history_list = []
         for item in _history_list : 
+            data = item.__dict__
             history_list.append({
-                "id" : item[0].id,
-                "user_id" : item[0].user_id,
-                "company_id" : item[0].company_id,
-                "company_name" : item[0].company_name,
-                "start_year" : item[0].start_year,
-                "end_year" : item[0].end_year,
-                "created_at" : item[0].created_at
+                "id" : data['id'],
+                "user_id" : data['user_id'],
+                "company_id" : data['company_id'],
+                "company_name" : data['company_name'],
+                "start_year" : data['start_year'],
+                "end_year" : data['end_year'],
+                "created_at" : data['created_at']
             })
         return {
             "total" : total,
@@ -321,44 +309,31 @@ def search_history_list(request : Request, page : int = 1, limit : int = 10, db 
 # API URL : http://localhost:8000/user/remove_search_history
 # 파라미터
 # history_id | int not null
-@router.post("remove_search_history")
+@router.post("/remove_search_history")
 def remove_search_history(request : Request, history_id : int, db : Session = Depends(get_db)) : 
     access_token = request.cookies.get("access_token")
     if not jwt_token_check(access_token) :
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="접근 권한이 없습니다.")
     else :
         company_crud.delete_search_history(db, history_id)
-        return {
-            "msg" : "해당 검색 기록이 정상적으로 삭제되었습니다."
-        }
+        return { "msg" : "해당 검색 기록이 정상적으로 삭제되었습니다." }
 
 # 아이디 찾기 API
-@router.post("find_userid")
+@router.post("/find_userid")
 def find_userid(_find_userid : users_schema.FindUserid, db : Session = Depends(get_db)) : 
     user = users_crud.find_userid(db, _find_userid = _find_userid)
-    result = {
-        "msg" : "해당하는 유저 정보가 없습니다."
-    }
-    
+    result = { "msg" : "해당하는 유저 정보가 없습니다." }
     if not user == None : 
-        result = {
-            "userid" : user.userid
-        }
+        result = { "userid" : user.userid }
     
     return result
 
 # 비밀번호 찾기 API
-@router.post("find_password")
+@router.post("/find_password")
 def find_userpw(_find_password : users_schema.FindPassword, db : Session = Depends(get_db)) :
     new_password = users_crud.find_password(db, _find_password)
-    result = {
-        "msg" : "해당하는 유저 정보가 없습니다."
-    }
-
+    result = { "msg" : "해당하는 유저 정보가 없습니다." }
     if new_password != "" : 
-        result = {
-            "new_password" : new_password
-        }
-    
+        result = { "new_password" : new_password }
     
     return result

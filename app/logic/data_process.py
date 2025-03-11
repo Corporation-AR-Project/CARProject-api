@@ -256,7 +256,7 @@ class DataProcess :
         return res
 
     # 기업 정보 가져오기
-    def comapny_info_list(self, company_name) :
+    def comapny_info_list(self, company_name, company_name2 = None) :
         # 알파벳 대응 한글 목록
         eng_to_ko = {
             "A" : "에이",
@@ -299,7 +299,7 @@ class DataProcess :
             items = res.json()['response']['body']['items'] # items 내에서
             # 반복문으로 정보들 호출
             for item in items['item'] : 
-                if item["enpPbanCmpyNm"] == company_name :  # 기업공시 회사명이랑 같은지 확인
+                if item["enpPbanCmpyNm"] == company_name or item["enpPbanCmpyNm"] == company_name2 :  # 기업공시 회사명이랑 같은지 확인
                     data = {
                         "법인등록번호" : item["crno"],
                         "법인명" : item["corpNm"],
@@ -328,7 +328,7 @@ class DataProcess :
                 items = res.json()['response']['body']['items'] # items 내에서
                 # 반복문으로 정보들 호출
                 for item in items['item'] : 
-                    if item["enpPbanCmpyNm"] == company_name : # 기업공시 회사명이랑 같은지 확인
+                    if item["enpPbanCmpyNm"] == company_name or item["enpPbanCmpyNm"] == company_name2 : # 기업공시 회사명이랑 같은지 확인
                         data = {
                             "법인등록번호" : item["crno"],
                             "법인명" : item["corpNm"],

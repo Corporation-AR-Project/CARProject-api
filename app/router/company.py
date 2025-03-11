@@ -33,15 +33,18 @@ router = APIRouter(
 # 파라미터 : keyword | str , Null able
 @router.get("/search")
 def search_company_keyword(db : Session = Depends(get_db), keyword : str = None) :
-    data = []
     # 기본으로 보여줄 기업명
-    if keyword == "" or keyword == None : 
-        data = ["삼성전자", "현대자동차", "기아", "LG전자", "한화엔진", "GS칼텍스", "현대모비스", "HD현대중공업"]
+    if keyword == "" or keyword is None : 
+        result = ["삼성전자", "현대자동차", "기아", "LG전자", "한화엔진", "GS칼텍스", "현대모비스", "HD현대중공업"]
     else :
-        data = company_crud.search_company_name_list(db, keyword=keyword)
+        data = company_crud.search_company_rename_list(db, keyword)
         result = []
-        for item in data :
-            result.append(item[0])
+        for item in data : 
+            name = item[0]
+            if item[1] != None :
+                name = name + "(" + item[1] + ")"
+            result.append(name)
+    
     # 결과값 리턴
     return {
         "status" : "success",
@@ -54,8 +57,20 @@ def search_company_keyword(db : Session = Depends(get_db), keyword : str = None)
 @router.get("/info")
 def company_info(name : str, request : Request, db : Session = Depends(get_db)) : 
     dp = DataProcess()
-    data = dp.comapny_info_list(name) # 데이터 가져오기
-    company = company_crud.search_company_name_jongmok(db, name)
+    company_id = None
+    company_name = company_crud.company_name_check(db, name)
+    if company_name != None : 
+        new_name = company_name[0]
+        old_name = company_name[1]
+        company_id = company_name[2]
+        data = dp.comapny_info_list(old_name, new_name) # 데이터 가져오기
+    else : 
+        data = dp.comapny_info_list(name) # 데이터 가져오기
+    if company_id != None : 
+        data['변경이력'] = [company_name[1], company_name[0]]
+        company = company_crud.search_company_name(db, id = company_id)
+    else :
+        company = company_crud.search_company_name_jongmok(db, name)
     if company != None :
         data['종목코드'] = company.jongmok_code
         data['업종코드'] = company.industry_code
@@ -361,3 +376,12 @@ def company_data_prediction(data, start_year, end_year) :
             pass
 
     return c_data
+
+
+@router.get("/data/add/rename") 
+def company_rename_add(company_id : int, old_name : str, new_name : str, db : Session = Depends(get_db)) : 
+    company_crud.company_rename_new(db , company_id, old_name, new_name) 
+
+@router.get("/data/add/search_name")
+def company_search_name(company_id : int, name : str, db : Session = Depends(get_db)) :
+    company_crud.create_company_search_name(db, company_id, name)

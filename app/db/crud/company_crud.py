@@ -1,4 +1,4 @@
-from ..models import Company, CompanyYearInfo, SearchHistory, InteresetCompany
+from ..models import Company, CompanyYearInfo, SearchHistory, InteresetCompany, CompanyRename, CompanyInfoRename
 from ..schema.company_schema import CompanyCreate, CompanyInfoCreate, CompanyUpdate, CompanyInfoUpdate, CompanyYearInfoSearch, CompanyHistory, InterestCompanyCreate
 from sqlalchemy.orm import Session
 from sqlalchemy import update, delete
@@ -87,6 +87,13 @@ def search_company_name_jongmok(db : Session, name : str) :
 # 기업 목록 검색
 def search_company_name_list(db : Session, keyword : str) : 
     return db.query(Company.name).filter(Company.name.ilike('%' + keyword + '%')).limit(8).all()
+
+# 기업 목록 검색 in 새 이름 항목에서 검색
+def search_company_rename_list(db : Session, keyword : str) : 
+    return db.query(Company.name, CompanyRename.new_name).outerjoin(CompanyRename, Company.id == CompanyRename.company_id).filter(
+        Company.name.ilike("%" + keyword + "%") |
+        CompanyRename.new_name.ilike("%" + keyword + "%")
+    ).limit(8).all()
 
 # 기업 년도 리스트 검색
 def search_company_year_list(db : Session, company_id : int) :
@@ -189,3 +196,35 @@ def max_min_years(db : Session) :
         func.min(CompanyYearInfo.year).label("min_year"),
         func.max(CompanyYearInfo.year).label("max_year")
     ).all()
+
+# 이름 확인하기
+def company_name_check(db : Session, name : str) :
+    return db.query(CompanyRename.new_name, CompanyRename.old_name, CompanyRename.company_id).filter(
+        (CompanyRename.old_name == name) | 
+        (CompanyRename.new_name == name)
+    ).first()
+
+# 이름 변경 생성
+def company_rename_new(db : Session, company_id : int, old_name : str, new_name : str) :
+    db_comapny_name = CompanyRename(
+        company_id = company_id,
+        old_name = old_name,
+        new_name = new_name
+    )
+    db.add(db_comapny_name)
+    db.commit()
+
+# 공공데이터용 이름 생성
+def create_company_search_name(db : Session, company_id : int, name : str) : 
+    db_company_name = CompanyInfoRename(
+        company_id = company_id,
+        search_name = name
+    )
+    db.add(db_company_name)
+    db.commit()
+
+# 공공데이터용 이름 검색
+def search_company_name(db : Session, name : str) :
+    return db.query(CompanyInfoRename.search_name).join(Company, CompanyInfoRename.company_id == Company.id).filter(
+        Company.name == name
+    ).first()

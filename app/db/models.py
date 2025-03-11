@@ -69,3 +69,22 @@ class SearchHistory(Base) :
     start_year = Column(String, nullable=True) # start_year(검색 시작 년도) | String, null
     end_year = Column(String, nullable=True) # end_year(검색 끝 년도) | String, null
     created_at = Column(DateTime, nullable=False, default=datetime.now) # created_at(생성날짜) | datetime, not null, default = datetime.now
+
+# 이름 변경 목록 테이블
+class CompanyRename(Base) : 
+    __tablename__ = "company_rename"
+
+    id = Column(Integer, primary_key=True, autoincrement=True) # id(아이디) | integer, primary key, autoincrement
+    company_id = Column(Integer, ForeignKey("company.id")) # company_id(기업 id) | integer, foreginKey(Company Table - id)
+    old_name = Column(String, nullable=False) # old_name(이전 이름) | String, not null
+    new_name = Column(String, nullable=False) # new_name(최신 이름) | String, not null
+    created_at = Column(DateTime, nullable=False, default=datetime.now) # created_at(생성날짜) | datetime, not null, default = datetime.now
+
+# 공공데이터 검색용 이름 테이블
+class CompanyInfoRename(Base) : 
+    __tablename__ = "company_info_rename"
+
+    id = Column(Integer, primary_key=True, autoincrement=True) # id(아이디) | integer, primary key, autoincrement
+    company_id = Column(Integer, ForeignKey("company.id")) # company_id(기업 id) | integer, foreginKey(Company Table - id)
+    search_name = Column(String, nullable=False) # 검색용 이름
+    created_at = Column(DateTime, nullable=False, default=datetime.now) # created_at(생성날짜) | datetime, not null, default = datetime.now
