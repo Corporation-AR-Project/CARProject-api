@@ -224,7 +224,13 @@ def create_company_search_name(db : Session, company_id : int, name : str) :
     db.commit()
 
 # 공공데이터용 이름 검색
-def search_company_name(db : Session, name : str) :
-    return db.query(CompanyInfoRename.search_name).join(Company, CompanyInfoRename.company_id == Company.id).filter(
-        Company.name == name
-    ).first()
+def search_company_info_name(db : Session, name : str, name2 : str = None) :
+    if name2 != None : 
+        return db.query(CompanyInfoRename.search_name, CompanyInfoRename.crno).join(Company, CompanyInfoRename.company_id == Company.id).filter(
+            (Company.name == name) | 
+            (Company.name == name2)
+        ).first()
+    else : 
+        return db.query(CompanyInfoRename.search_name, CompanyInfoRename.crno).join(Company, CompanyInfoRename.company_id == Company.id).filter(
+            Company.name == name
+        ).first()

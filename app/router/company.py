@@ -58,19 +58,34 @@ def search_company_keyword(db : Session = Depends(get_db), keyword : str = None)
 def company_info(name : str, request : Request, db : Session = Depends(get_db)) : 
     dp = DataProcess()
     company_id = None
+    crno = None
+    
     company_name = company_crud.company_name_check(db, name)
     if company_name != None : 
         new_name = company_name[0]
         old_name = company_name[1]
         company_id = company_name[2]
-        data = dp.comapny_info_list(old_name, new_name) # 데이터 가져오기
+
+        search_name = company_crud.search_company_info_name(db, name = old_name, name2 = new_name)
+        if search_name != None : 
+            crno = search_name[1]
+            search_name = search_name[0]
+
+        data = dp.comapny_info_list(old_name, search_name, crno, new_name) # 데이터 가져오기
     else : 
-        data = dp.comapny_info_list(name) # 데이터 가져오기
+        search_name = company_crud.search_company_info_name(db, name)
+        if search_name != None : 
+            crno = search_name[1]
+            search_name = search_name[0]
+
+        data = dp.comapny_info_list(name, search_name, crno) # 데이터 가져오기
+    
     if company_id != None : 
         data['변경이력'] = [company_name[1], company_name[0]]
         company = company_crud.search_company_name(db, id = company_id)
     else :
         company = company_crud.search_company_name_jongmok(db, name)
+    
     if company != None :
         data['종목코드'] = company.jongmok_code
         data['업종코드'] = company.industry_code

@@ -86,5 +86,6 @@ class CompanyInfoRename(Base) :
 
     id = Column(Integer, primary_key=True, autoincrement=True) # id(아이디) | integer, primary key, autoincrement
     company_id = Column(Integer, ForeignKey("company.id")) # company_id(기업 id) | integer, foreginKey(Company Table - id)
-    search_name = Column(String, nullable=False) # 검색용 이름
+    search_name = Column(String, nullable=False) # search_name(검색용 이름 = 법인명) | String null able
+    crno = Column(String, nullable=True) # crno(법인등록번호) | string, null able
     created_at = Column(DateTime, nullable=False, default=datetime.now) # created_at(생성날짜) | datetime, not null, default = datetime.now

@@ -256,7 +256,7 @@ class DataProcess :
         return res
 
     # 기업 정보 가져오기
-    def comapny_info_list(self, company_name, company_name2 = None) :
+    def comapny_info_list(self, company_name, search_name, crno, company_name2 = None) :
         # 알파벳 대응 한글 목록
         eng_to_ko = {
             "A" : "에이",
@@ -294,7 +294,15 @@ class DataProcess :
         param = "?serviceKey=" + os.environ["API_SERVICE_KEY"] +"&pageNo=1&numOfRows=30&resultType=json&corpNm="
 
         # response 값 가져오기
-        res = self.request_open_api(url, param + company_name)
+        if search_name != None :
+            param = param + search_name
+        else : 
+            param = param + company_name
+
+        if crno != None : 
+            param = param + "&crno=" + crno
+        
+        res = self.request_open_api(url, param)
         if res.status_code == 200 : # response가 200 == 성공적이라면
             items = res.json()['response']['body']['items'] # items 내에서
             # 반복문으로 정보들 호출
