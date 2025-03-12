@@ -57,47 +57,56 @@ def search_company_keyword(db : Session = Depends(get_db), keyword : str = None)
 @router.get("/info")
 def company_info(name : str, request : Request, db : Session = Depends(get_db)) : 
     dp = DataProcess()
-    company_id = None
-    crno = None
+    company_id = None # compnay_id
+    crno = None # 법인등록번호
     
+    # 기업명 변경됬는지 확인
     company_name = company_crud.company_name_check(db, name)
-    if company_name != None : 
-        new_name = company_name[0]
-        old_name = company_name[1]
-        company_id = company_name[2]
-
+    if company_name != None : # 있으면
+        new_name = company_name[0] # 새이름
+        old_name = company_name[1] # 옛이름
+        company_id = company_name[2] # company_id
+        
+        # 가져온걸로 기업 검색용 이름 찾기
         search_name = company_crud.search_company_info_name(db, name = old_name, name2 = new_name)
+        # 있으면 데이터 세팅
         if search_name != None : 
-            crno = search_name[1]
-            search_name = search_name[0]
+            crno = search_name[1] # 법인등록번호(없을 수도 있음)
+            search_name = search_name[0] # 검색용 이름
 
-        data = dp.comapny_info_list(old_name, search_name, crno, new_name) # 데이터 가져오기
+
+        data = dp.comapny_info_list(old_name, search_name, crno, new_name) # 공공 데이터 가져오기
     else : 
+        # 기업 검색용 이름 찾기
         search_name = company_crud.search_company_info_name(db, name)
+        # 있으면 데이터 세팅
         if search_name != None : 
-            crno = search_name[1]
-            search_name = search_name[0]
+            crno = search_name[1] # 법인등록번호(없을 수도 있음)
+            search_name = search_name[0] # 검색용 이름
 
         data = dp.comapny_info_list(name, search_name, crno) # 데이터 가져오기
     
+    # company_id가 있으면
     if company_id != None : 
-        data['변경이력'] = [company_name[1], company_name[0]]
-        company = company_crud.search_company_name(db, id = company_id)
+        data['변경이력'] = [company_name[1], company_name[0]] # 데이터에 변경이력 추가
+        company = company_crud.search_company_name(db, id = company_id) # 기업 정보 검색
     else :
-        company = company_crud.search_company_name_jongmok(db, name)
+        company = company_crud.search_company_name_jongmok(db, name) # 없으면 이름으로 정보 가져오기
     
+    # company 정보가 있으면
     if company != None :
-        data['종목코드'] = company.jongmok_code
-        data['업종코드'] = company.industry_code
-        data['업종명'] = company.industry_name
-        data['company_id'] = company.id
+        data['종목코드'] = company.jongmok_code # 종목코드
+        data['업종코드'] = company.industry_code # 업종코드
+        data['업종명'] = company.industry_name # 업종명
+        data['company_id'] = company.id # company_id 세팅
 
+        # 로그인 확인
         access_token = request.cookies.get("access_token")
-        if not access_token == None :
-            info = jwt.decode(access_token, SECRET_KEY, algorithms=ALGORITHM)
-            check = company_crud.check_interest_company(db, user_id=info['id'], company_id=company.id)
-            if check != None :
-                data['interest_id'] = check.id
+        if not access_token == None : # 로그인 되어있으면
+            info = jwt.decode(access_token, SECRET_KEY, algorithms=ALGORITHM) # access_token 값 가져와서
+            check = company_crud.check_interest_company(db, user_id=info['id'], company_id=company.id) # 관심기업인지 확인
+            if check != None : # 관심기업이면
+                data['interest_id'] = check.id # 데이터 세팅
 
     return {
         "status" : "success",
