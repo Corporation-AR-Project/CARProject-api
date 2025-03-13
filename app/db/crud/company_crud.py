@@ -86,7 +86,10 @@ def search_company_name_jongmok(db : Session, name : str) :
 
 # 기업 목록 검색
 def search_company_name_list(db : Session, keyword : str) : 
-    return db.query(Company.name).filter(Company.name.ilike('%' + keyword + '%')).limit(8).all()
+    return db.query(Company.name).filter(
+        Company.name.ilike('%' + keyword + '%'),
+        Company.is_visible == True
+    ).limit(8).all()
 
 # 기업 목록 검색 in 새 이름 항목에서 검색
 def search_company_rename_list(db : Session, keyword : str) : 
