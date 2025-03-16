@@ -78,11 +78,17 @@ def update_company_year_info(db : Session, company_year_info_update : CompanyInf
 
 # 기업 단일 검색
 def search_company_name(db : Session, id : int) : 
-    return db.query(Company).filter(Company.id == id).first() 
+    return db.query(Company).filter(
+        Company.id == id,
+        Company.is_visible == True
+    ).first() 
 
 # 기업 단일 검색(이름 + 종목코드)
 def search_company_name_jongmok(db : Session, name : str) : 
-    return db.query(Company).filter(Company.name == name).first() 
+    return db.query(Company).filter(
+        Company.name == name,
+        Company.is_visible == True
+    ).first() 
 
 # 기업 목록 검색
 def search_company_name_list(db : Session, keyword : str) : 
@@ -94,8 +100,9 @@ def search_company_name_list(db : Session, keyword : str) :
 # 기업 목록 검색 in 새 이름 항목에서 검색
 def search_company_rename_list(db : Session, keyword : str) : 
     return db.query(Company.name, CompanyRename.new_name).outerjoin(CompanyRename, Company.id == CompanyRename.company_id).filter(
-        Company.name.ilike("%" + keyword + "%") |
-        CompanyRename.new_name.ilike("%" + keyword + "%")
+        (Company.name.ilike("%" + keyword + "%") |
+        CompanyRename.new_name.ilike("%" + keyword + "%")),
+        Company.is_visible == True
     ).limit(8).all()
 
 # 기업 년도 리스트 검색
