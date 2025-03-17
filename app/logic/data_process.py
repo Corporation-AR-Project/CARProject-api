@@ -322,34 +322,5 @@ class DataProcess :
                         "기업설립일자" : item["enpEstbDt"]
                     }
                     break # 반복문 탈출
-        
-        # 만약 값이 없으면 기업명 - 알파벳 한글 전환해서 한번 더 검색
-        if data == {} :
-            name = company_name # 바꾸기 용 변수 생성
-            # 알파벳 한글 전환
-            for key in eng_to_ko.keys() :
-                name = name.replace(key, eng_to_ko[key])
-
-            # API 호출
-            res = self.request_open_api(url, param + name)
-            if res.status_code == 200 : # 값 정상이면
-                items = res.json()['response']['body']['items'] # items 내에서
-                # 반복문으로 정보들 호출
-                for item in items['item'] : 
-                    if item["enpPbanCmpyNm"] == company_name or item["enpPbanCmpyNm"] == company_name2 : # 기업공시 회사명이랑 같은지 확인
-                        data = {
-                            "법인등록번호" : item["crno"],
-                            "법인명" : item["corpNm"],
-                            "법인영문명" : item["corpEnsnNm"],
-                            "기업공시회사명" : item["enpPbanCmpyNm"],
-                            "기업대표자성명" : item["enpRprFnm"],
-                            "사업자등록번호" : item["bzno"],
-                            "기업기본주소" : item["enpBsadr"],
-                            "기업홈페이지URL" : item["enpHmpgUrl"],
-                            "기업전화번호" : item["enpTlno"],
-                            "기업팩스번호" : item["enpFxno"],
-                            "기업설립일자" : item["enpEstbDt"]
-                        }
-                        break # 반복문 탈출
 
         return data
