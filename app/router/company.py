@@ -217,7 +217,7 @@ def company_prediction(company_id : str, db : Session = Depends(get_db)) :
             c_data[year] = d # c_data 안에 넣기
 
         # max_year 부터 예상 5개년치 뽑기
-        c_data = company_data_prediction(c_data, int(max_year), int(max_year) + 5) 
+        c_data = company_data_prediction(c_data, int(max_year), int(max_year) + 5)
         # 기타 기업 정보 넣기
         c_data['업종'] = company.industry_code
         c_data['업종명'] = company.industry_name
@@ -370,8 +370,8 @@ def company_data_prediction(data, start_year, end_year) :
             iqr = q3 - q1  # IQR
 
             # 이상치 경계 설정
-            lower_bound = q1 - 1.5 * iqr  # 하한
-            upper_bound = q3 + 1.5 * iqr  # 상한
+            lower_bound = q1 - 0.5 * iqr  # 하한
+            upper_bound = q3 + 2 * iqr  # 상한
 
             # 이상치 제거 (하한과 상한을 벗어나는 값 제거)
             d_df = d_df[(d_df >= lower_bound) & (d_df <= upper_bound)]
