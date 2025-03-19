@@ -107,11 +107,11 @@ def search_company_rename_list(db : Session, keyword : str) :
 
 # 기업 년도 리스트 검색
 def search_company_year_list(db : Session, company_id : int) :
-    return db.query(CompanyYearInfo.year).filter(CompanyYearInfo.company_id == company_id).all()
+    return db.query(CompanyYearInfo.year).filter(CompanyYearInfo.company_id == company_id, CompanyYearInfo.is_visible == True).all()
 
 # 기업 년도 정보 검색
 def search_company_year(db : Session, company_id : int, year : str) :
-    return db.query(CompanyYearInfo).filter(CompanyYearInfo.company_id == company_id, CompanyYearInfo.year == year).first()
+    return db.query(CompanyYearInfo).filter(CompanyYearInfo.company_id == company_id, CompanyYearInfo.year == year, CompanyYearInfo.is_visible == True).first()
 
 # 기업 특정 기간 정보 검색
 def search_company_year_info(db : Session, company_year_info_search : CompanyYearInfoSearch) : 
