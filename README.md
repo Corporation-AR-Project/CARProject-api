@@ -68,6 +68,15 @@ pip install "python-jose[cryptography]"
 
 # sklearn
 pip install -U scikit-learn
+
+# opencv-python
+pip install opencv-python
+
+# pytesseract
+pip install pytesseract
+
+# PyPDF2
+pip install PyPDF2
 ```
 
 ### Run

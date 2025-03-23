@@ -1,7 +1,9 @@
 # app/router/company.py
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, UploadFile, File
 from ..logic.data_process import DataProcess
 from ..logic.calculator import Calculator
+from PyPDF2 import PdfReader
+from PIL import Image
 import numpy as np
 import pandas as pd
 from sqlalchemy.orm import Session
@@ -10,10 +12,10 @@ from ..db.crud import company_crud
 from ..db.schema import company_schema
 from jose import jwt
 from dotenv import load_dotenv
-import os
+import os, fitz, warnings, re, pytesseract
 from statsmodels.tsa.arima.model import ARIMA
-import warnings
 
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 warnings.filterwarnings("ignore") # warning 에러 안보이게 처리
 
 # env 파일 설정
@@ -258,6 +260,19 @@ def company_prediction(company_id : str, db : Session = Depends(get_db)) :
         "data" : result
     }
 
+# FileOCR API
+# API URL : http://localhost:8000/company/fileInfo
+@router.get("/fileInfo")
+def fileOCRInfo(file: UploadFile = File(...)) : 
+    imgPath = r"../OCRImage"
+    pdfreader = PdfReader(file)
+    pdf_index = pdfreader.pages[0].extract_text()
+    pdf_index = pdf_index.replace(".", "")
+    pageNum = re.search(r'사업의 개요 ([0-9]+)\n[0-9]+\s[가-힣\s]+([0-9]+)', pdf_index)
+    endPageNum = int(pageNum.group(2)) - int(pageNum.group(1))
+    pageNum = "Page " + pageNum.group(1) + "\n"
+    pass
+
 # JSON 데이터 초기화 API
 # API URL : http://localhost:8000/company/data/reset
 # 파라미터
@@ -341,7 +356,6 @@ def company_db_data_reset(db : Session = Depends(get_db), is_working = None) :
         "msg" : "DB 입력이 완료되었습니다."
     }
 
-
 # 재무 정보 model > dict 변환
 def finance_data_to_dict(data) :
     # dict key 전환용
@@ -351,7 +365,6 @@ def finance_data_to_dict(data) :
     del d['year']
     del d['_del']
     return year, d
-
 
 # 정해진 년도까지 데이터 예측
 def company_data_prediction(data, start_year, end_year) : 
@@ -400,7 +413,6 @@ def company_data_prediction(data, start_year, end_year) :
             pass
 
     return c_data
-
 
 @router.get("/data/add/rename") 
 def company_rename_add(company_id : int, old_name : str, new_name : str, db : Session = Depends(get_db)) : 
