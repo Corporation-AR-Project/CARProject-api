@@ -12,7 +12,7 @@ from ..db.crud import company_crud
 from ..db.schema import company_schema
 from jose import jwt
 from dotenv import load_dotenv
-import os, fitz, warnings, re, pytesseract
+import os, fitz, warnings, re, pytesseract, io
 from statsmodels.tsa.arima.model import ARIMA
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -125,65 +125,68 @@ def company_info(name : str, request : Request, db : Session = Depends(get_db)) 
 def company_analyze(request : Request, company_id : str, first_year : int = None, last_year : int = None, db : Session = Depends(get_db)) :
     calc = Calculator() # 계산용 class 생성
     company = company_crud.search_company_name(db, id=company_id) # 기업 정보 불러오기
-    year_list = company_crud.search_company_year_list(db, company_id=company.id) # 년도 목록 원본 불러오기
-    l = list(item[0] for item in year_list) # 년도 목록 생성
-        
-    # year 입력값 없는 경우
-    if  first_year == None or last_year == None :
-        result = l # 년도 목록 result 값으로 지정
-    else : # year 입력값이 잇으면
-        # 입력받은 year로 list 생성
-        year_list = list(map(str, list(np.arange(first_year, last_year + 1, 1))))
-
-        # year_list가 6 이상이거나 0 이하 이면
-        if len(year_list) >= 6 or len(year_list) <= 0 :
-            result = { "msg" : "잘못된 year_list 입니다." } # 에러 띄우기
-        else : # 문제 없는 경우
-            # 해당 기업의 year 범위 내 재무 정보 목록 가져오기
-            schema = company_schema.CompanyYearInfoSearch(company_id=company.id, first_year=str(first_year), last_year=str(last_year), industry_code=None)
-            company_data = company_crud.search_company_year_info(db, schema)
-            company_info = {
-                "업종" : company.industry_code,
-                "업종명" : company.industry_name,
-                "종목코드" : company.jongmok_code
-            }
-
-            # 가져온거 세팅            
-            for c_d in company_data : 
-                year, d = finance_data_to_dict(c_d) # DB 모델 dict로 변환
-                company_info[year] = d # 세팅
+    if company == None : 
+        result = { "msg" : "검색 미지원 기업입니다." }
+    else :
+        year_list = company_crud.search_company_year_list(db, company_id=company.id) # 년도 목록 원본 불러오기
+        l = list(item[0] for item in year_list) # 년도 목록 생성
             
-            # 동일 업종 목록 가져오기
-            search_schema = company_schema.CompanyYearInfoSearch(company_id=None, first_year=str(first_year-1), last_year=str(last_year), industry_code=company.industry_code)
-            industry_list = company_crud.search_industry_year_info(db, company_year_info_search=search_schema)
-            industry_company_list = {} # 목록용 dict 생성
-            # for 문으로 돌리기
-            for industry in industry_list :
-                name = industry[1] # 기업 이름
-                year, d = finance_data_to_dict(industry[0]) # 년도랑 해당 년도 정보
-                if industry_company_list.get(name) == None : # 해당 기업이 없으면 
-                    industry_company_list[name] = {} # 생성하고
-                industry_company_list[name][year] = d # 해당 정보 dict에 넣기
-            
-            # 실제로 계산 가능한지 확인
-            if set(year_list).issubset(set(l)) : # 뽑아온 년도 목록안에 해당 년도가 있는지 확인
-                result = calc.calc(year_list, company_info, industry_company_list) # 문제 없으면 계산
+        # year 입력값 없는 경우
+        if  first_year == None or last_year == None :
+            result = l # 년도 목록 result 값으로 지정
+        else : # year 입력값이 잇으면
+            # 입력받은 year로 list 생성
+            year_list = list(map(str, list(np.arange(first_year, last_year + 1, 1))))
 
-                # 검색 기록 설정
-                access_token = request.cookies.get("access_token") # access_token 가져와서
-                if not access_token == None : # 만약 로그인 했다면
-                    info = jwt.decode(access_token, SECRET_KEY, algorithms=ALGORITHM) # 해당 정보 가져와서
-                    # search_history 생성
-                    company_crud.create_search_history(db, company_schema.CompanyHistory(
-                        user_id=info['id'],
-                        company_id=company.id,
-                        company_name = company.name,
-                        start_year=str(first_year),
-                        end_year=str(last_year)
-                    ))
+            # year_list가 6 이상이거나 0 이하 이면
+            if len(year_list) >= 6 or len(year_list) <= 0 :
+                result = { "msg" : "잘못된 year_list 입니다." } # 에러 띄우기
+            else : # 문제 없는 경우
+                # 해당 기업의 year 범위 내 재무 정보 목록 가져오기
+                schema = company_schema.CompanyYearInfoSearch(company_id=company.id, first_year=str(first_year), last_year=str(last_year), industry_code=None)
+                company_data = company_crud.search_company_year_info(db, schema)
+                company_info = {
+                    "업종" : company.industry_code,
+                    "업종명" : company.industry_name,
+                    "종목코드" : company.jongmok_code
+                }
 
-            else : # 계산 불가능하면 검색 결과 없다고 뜨게
-                result = { "msg" : "검색결과 없습니다." }
+                # 가져온거 세팅            
+                for c_d in company_data : 
+                    year, d = finance_data_to_dict(c_d) # DB 모델 dict로 변환
+                    company_info[year] = d # 세팅
+                
+                # 동일 업종 목록 가져오기
+                search_schema = company_schema.CompanyYearInfoSearch(company_id=None, first_year=str(first_year-1), last_year=str(last_year), industry_code=company.industry_code)
+                industry_list = company_crud.search_industry_year_info(db, company_year_info_search=search_schema)
+                industry_company_list = {} # 목록용 dict 생성
+                # for 문으로 돌리기
+                for industry in industry_list :
+                    name = industry[1] # 기업 이름
+                    year, d = finance_data_to_dict(industry[0]) # 년도랑 해당 년도 정보
+                    if industry_company_list.get(name) == None : # 해당 기업이 없으면 
+                        industry_company_list[name] = {} # 생성하고
+                    industry_company_list[name][year] = d # 해당 정보 dict에 넣기
+                
+                # 실제로 계산 가능한지 확인
+                if set(year_list).issubset(set(l)) : # 뽑아온 년도 목록안에 해당 년도가 있는지 확인
+                    result = calc.calc(year_list, company_info, industry_company_list) # 문제 없으면 계산
+
+                    # 검색 기록 설정
+                    access_token = request.cookies.get("access_token") # access_token 가져와서
+                    if not access_token == None : # 만약 로그인 했다면
+                        info = jwt.decode(access_token, SECRET_KEY, algorithms=ALGORITHM) # 해당 정보 가져와서
+                        # search_history 생성
+                        company_crud.create_search_history(db, company_schema.CompanyHistory(
+                            user_id=info['id'],
+                            company_id=company.id,
+                            company_name = company.name,
+                            start_year=str(first_year),
+                            end_year=str(last_year)
+                        ))
+
+                else : # 계산 불가능하면 검색 결과 없다고 뜨게
+                    result = { "msg" : "검색결과 없습니다." }
     
     # 값 반환
     return {
@@ -262,16 +265,68 @@ def company_prediction(company_id : str, db : Session = Depends(get_db)) :
 
 # FileOCR API
 # API URL : http://localhost:8000/company/fileInfo
-@router.get("/fileInfo")
-def fileOCRInfo(file: UploadFile = File(...)) : 
-    imgPath = r"../OCRImage"
-    pdfreader = PdfReader(file)
+@router.post("/fileInfo")
+async def fileOCRInfo(file: UploadFile) : 
+    imgPath = r"./OCRImage"
+
+    file_name = file.filename
+    path = f"./uploads/" + file_name
+    with open(path, "wb") as f : 
+        f.write(await file.read()) 
+
+    pdfreader = PdfReader(path)
     pdf_index = pdfreader.pages[0].extract_text()
     pdf_index = pdf_index.replace(".", "")
     pageNum = re.search(r'사업의 개요 ([0-9]+)\n[0-9]+\s[가-힣\s]+([0-9]+)', pdf_index)
     endPageNum = int(pageNum.group(2)) - int(pageNum.group(1))
+    page_idx = int(pageNum.group(1))
     pageNum = "Page " + pageNum.group(1) + "\n"
-    pass
+
+    for f in os.listdir(imgPath):
+        os.remove(os.path.join(imgPath, f))
+    
+    document = fitz.open(path)
+    for i in range(len(document)) : 
+        page = document.load_page(i)
+        pix = page.get_pixmap()
+        image_path = os.path.join(imgPath, f"page_{i + 1}.jpeg")# 이미지 파일 경로 설정
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)  
+        # Pixmap을 PIL 이미지로 변환
+        img.save(image_path, "JPEG")  # 이미지를 PNG 형식으로 저장
+
+    info_text = ""
+    for i in os.listdir(imgPath) : 
+        if i.endswith('.jpeg'):  # PNG 파일만 처리
+            i = "page_" + str(page_idx) + ".jpeg"
+            image_path = os.path.join(imgPath, i)  # 이미지 파일 경로
+            try:
+                image = Image.open(image_path)  # 이미지 열기
+                text = pytesseract.image_to_string(image, lang='kor+eng', config = '--oem 3 -c preserve_interword_spaces=1 --psm 4')  # OCR을 사용해 텍스트 추출 (한국어로 인식)
+                # print(f"OCR result for {i}: {text}")  # OCR 결과 출력
+
+                if pageNum in text : 
+                    for add in range(0, endPageNum) : 
+                        pdf_page = int(re.search('page_([0-9]+).jpeg',i).group(1)) - 1
+                        page = pdfreader.pages[pdf_page + add].extract_text()
+                        page = re.sub(r'[\n\s\d\D]+사업의 개요\n\s\n','', page)
+                        page = re.sub(r'전자공시시스템 dart\.fss\.or\.kr Page \d+','',page)
+                        page = re.sub(r'\n\.', '', page)
+                        page = re.sub(r'☞\s[\d\D]+바랍니다\.\n', '', page)
+                        info_text += page + "\n"
+                    break
+
+            except Exception as e:
+                print(f"Error processing image {i}: {e}")  # 오류 발생 시 오류 메시지 출력
+                text = ""  # 오류 발생 시 빈 문자열로 처리
+            page_idx += 1
+
+    for f in os.listdir(imgPath):
+        os.remove(os.path.join(imgPath, f))
+
+    return {
+        "status" : "success",
+        "data" : info_text
+    }
 
 # JSON 데이터 초기화 API
 # API URL : http://localhost:8000/company/data/reset

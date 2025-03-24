@@ -3,7 +3,7 @@
 
 from fastapi import FastAPI # FastAPI import
 from starlette.middleware.cors import CORSMiddleware
-
+from fastapi.staticfiles import StaticFiles
 from app.router import company, user
 
 app = FastAPI()
@@ -14,6 +14,7 @@ origins = [
     "http://127.0.0.1:8000",
     "http://localhost",
     "http://localhost:8000",
+    "http://localhost:63342",
 ]
 
 # app middleware 처리

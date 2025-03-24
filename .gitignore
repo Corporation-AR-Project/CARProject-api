@@ -5,3 +5,7 @@ __pycache__
 alembic.ini
 myapi.db
 /migrations
+OCRImage
+OCRImage/*
+uploads
+uploads/*
