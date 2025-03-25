@@ -26,6 +26,7 @@
 + `python 3.12.8`
 + `FastAPI`
 + `SQLite`
++ `tesseract`
 
 ## 실행방법
 CARProject-api의 실행방법에 대해 기술합니다.
