@@ -12,9 +12,10 @@ from ..db.crud import company_crud
 from ..db.schema import company_schema
 from jose import jwt
 from dotenv import load_dotenv
-import os, fitz, warnings, re, pytesseract, io
+import os, fitz, warnings, re, pytesseract
 from statsmodels.tsa.arima.model import ARIMA
 
+# OCR
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 warnings.filterwarnings("ignore") # warning 에러 안보이게 처리
 
@@ -267,62 +268,67 @@ def company_prediction(company_id : str, db : Session = Depends(get_db)) :
 # API URL : http://localhost:8000/company/fileInfo
 @router.post("/fileInfo")
 async def fileOCRInfo(file: UploadFile) : 
-    imgPath = r"./OCRImage"
+    imgPath = r"./OCRImage" # OCR img 생성 경로
 
-    file_name = file.filename
-    path = f"./uploads/" + file_name
+    file_name = file.filename # 파일명 변수
+    path = f"./uploads/" + file_name # PDF 경로
     with open(path, "wb") as f : 
-        f.write(await file.read()) 
+        f.write(await file.read()) # PDF 생성
 
+    # PDFReader 가져오기
     pdfreader = PdfReader(path)
-    pdf_index = pdfreader.pages[0].extract_text()
-    pdf_index = pdf_index.replace(".", "")
-    pageNum = re.search(r'사업의 개요 ([0-9]+)\n[0-9]+\s[가-힣\s]+([0-9]+)', pdf_index)
-    endPageNum = int(pageNum.group(2)) - int(pageNum.group(1))
-    page_idx = int(pageNum.group(1))
-    pageNum = "Page " + pageNum.group(1) + "\n"
+    pdf_index = pdfreader.pages[0].extract_text() # 목차 페이지 가져오기
+    pdf_index = pdf_index.replace(".", "") # ..... < 이거 다 없앰
+    pageNum = re.search(r'사업의 개요 ([0-9]+)\n[0-9]+\s[가-힣\s]+([0-9]+)', pdf_index) # 사업의 개요 부분 페이지 가져오기
+    endPageNum = int(pageNum.group(2)) - int(pageNum.group(1)) # 사업의 개요 부분 페이지 수 계산
+    page_idx = int(pageNum.group(1)) # 페이지 시작 부분
+    pageNum = "Page " + pageNum.group(1) + "\n" # 찾을 문자열
 
+    # OCR img 폴더 안에 뭐가 있으면
     for f in os.listdir(imgPath):
-        os.remove(os.path.join(imgPath, f))
+        os.remove(os.path.join(imgPath, f)) # 삭제
     
+    # fitz로 pdf 열기
     document = fitz.open(path)
-    for i in range(len(document)) : 
-        page = document.load_page(i)
-        pix = page.get_pixmap()
-        image_path = os.path.join(imgPath, f"page_{i + 1}.jpeg")# 이미지 파일 경로 설정
+    for i in range(len(document)) : #pdf page 수만큼 for문 반복
+        page = document.load_page(i) # 해당하는 순서의 페이지 가져와서
+        pix = page.get_pixmap() # pixmap 가져오기
+        image_path = os.path.join(imgPath, f"page_{i + 1}.jpeg") # 이미지 파일 경로 설정
         img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)  
         # Pixmap을 PIL 이미지로 변환
-        img.save(image_path, "JPEG")  # 이미지를 PNG 형식으로 저장
+        img.save(image_path, "JPEG")  # 이미지를 JPEG 형식으로 저장
 
+    # 결과물 텍스트 생성
     info_text = ""
-    for i in os.listdir(imgPath) : 
-        if i.endswith('.jpeg'):  # PNG 파일만 처리
-            i = "page_" + str(page_idx) + ".jpeg"
+    for i in os.listdir(imgPath) : # 이미지 수 만큼 for 돌리기
+        if i.endswith('.jpeg'):  # JPEG 파일만 처리
+            i = "page_" + str(page_idx) + ".jpeg" # 페이지 시작 부분부터 찾게 설정
             image_path = os.path.join(imgPath, i)  # 이미지 파일 경로
             try:
                 image = Image.open(image_path)  # 이미지 열기
                 text = pytesseract.image_to_string(image, lang='kor+eng', config = '--oem 3 -c preserve_interword_spaces=1 --psm 4')  # OCR을 사용해 텍스트 추출 (한국어로 인식)
-                # print(f"OCR result for {i}: {text}")  # OCR 결과 출력
 
+                # 추출한 텍스트에 찾는 문자열 있는지 확인
                 if pageNum in text : 
-                    for add in range(0, endPageNum) : 
+                    for add in range(0, endPageNum) : # 있으면 해당 페이지부터 페이지 수 계산해서 데이터 긁음
                         pdf_page = int(re.search('page_([0-9]+).jpeg',i).group(1)) - 1
-                        page = pdfreader.pages[pdf_page + add].extract_text()
+                        page = pdfreader.pages[pdf_page + add].extract_text() # 내용 가져오기
+                        # 필요없는 데이터 삭제
                         page = re.sub(r'[\n\s\d\D]+사업의 개요\n\s\n','', page)
                         page = re.sub(r'전자공시시스템 dart\.fss\.or\.kr Page \d+','',page)
                         page = re.sub(r'\n\.', '', page)
                         page = re.sub(r'☞\s[\d\D]+바랍니다\.\n', '', page)
                         info_text += page + "\n"
-                    break
+                    break # 그리고 break
 
             except Exception as e:
-                print(f"Error processing image {i}: {e}")  # 오류 발생 시 오류 메시지 출력
-                text = ""  # 오류 발생 시 빈 문자열로 처리
+                info_text = ""  # 오류 발생 시 빈 문자열로 처리
             page_idx += 1
 
-    for f in os.listdir(imgPath):
+    for f in os.listdir(imgPath): # OCR img 내에 있는거 전부 삭제
         os.remove(os.path.join(imgPath, f))
 
+    # 결과 반환
     return {
         "status" : "success",
         "data" : info_text
