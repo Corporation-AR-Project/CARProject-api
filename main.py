@@ -15,6 +15,7 @@ origins = [
     "http://localhost",
     "http://localhost:8000",
     "http://localhost:63342",
+    "http://localhost:9090",
 ]
 
 # app middleware 처리
