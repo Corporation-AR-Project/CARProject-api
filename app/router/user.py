@@ -98,6 +98,8 @@ def logout_user(response : Response) :
 def isLogin_check(request : Request) :
     is_login = False
     access_token = request.cookies.get("access_token")
+    if access_token == None : 
+        access_token = request.headers.get("ACCESS_TOKEN")
     if not access_token == None :
         is_login = True
         
@@ -108,6 +110,9 @@ def isLogin_check(request : Request) :
 @router.get("/info")
 def info_user(request : Request, db : Session = Depends(get_db)) : 
     access_token = request.cookies.get("access_token")
+    if access_token == None : 
+        access_token = request.headers.get("ACCESS_TOKEN")
+
     if not jwt_token_check(access_token) :
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="접근 권한이 없습니다.")
     else :
@@ -135,9 +140,11 @@ def info_user(request : Request, db : Session = Depends(get_db)) :
 # gender | str not null
 # foreginer | boolean not null
 # phone | str not null
-@router.post("/modify", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/modify")
 def modify_user(_user_update : users_schema.UserInfoUpdate, request : Request, response : Response, db : Session = Depends(get_db)) :
     access_token = request.cookies.get("access_token")
+    if access_token == None : 
+        access_token = request.headers.get("ACCESS_TOKEN")
     if not jwt_token_check(access_token, id = _user_update.id) :
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="접근 권한이 없습니다.")
     else : 
@@ -156,6 +163,8 @@ def modify_user(_user_update : users_schema.UserInfoUpdate, request : Request, r
         # 쿠키에 저장
         response.set_cookie(key="access_token", value=access_token, expires=ACCESS_TOKEN_EXPIRE_MINUTES, httponly=True)
 
+    return {}
+
 # 비밀번호 수정 API (POST)
 # API URL : http://localhost:8000/user/modify_password
 # 파라미터
@@ -164,7 +173,8 @@ def modify_user(_user_update : users_schema.UserInfoUpdate, request : Request, r
 @router.post("/modify_password", status_code=status.HTTP_204_NO_CONTENT)
 def modify_password_user(_user_password_update : users_schema.UserPasswordUpdate, request : Request, db : Session = Depends(get_db)) :
     access_token = request.cookies.get("access_token")
-
+    if access_token == None : 
+        access_token = request.headers.get("ACCESS_TOKEN")
     # login 확인
     user = users_crud.get_user_id(db, id = _user_password_update.id)
     # 해당 userid의 유저가 없거나 비번이 틀린 경우
@@ -187,6 +197,8 @@ def modify_password_user(_user_password_update : users_schema.UserPasswordUpdate
 @router.post("/withdraw", status_code=status.HTTP_204_NO_CONTENT)
 def withdraw_user(id : int, request : Request, response : Response, db : Session = Depends(get_db)) :
     access_token = request.cookies.get("access_token")
+    if access_token == None : 
+        access_token = request.headers.get("ACCESS_TOKEN")
     if not jwt_token_check(access_token, id) : 
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="접근 권한이 없습니다.")
     else :
@@ -223,6 +235,8 @@ def userid_duplicateCheck(userid : str, db : Session = Depends(get_db)) :
 @router.get("/interest_company_list")
 def search_interest_company_list(request : Request, page : int = 1, limit : int = 10, db : Session = Depends(get_db)) :
     access_token = request.cookies.get("access_token")
+    if access_token == None : 
+        access_token = request.headers.get("ACCESS_TOKEN")
     if not jwt_token_check(access_token) :
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="접근 권한이 없습니다.")
     else :
@@ -252,6 +266,8 @@ def search_interest_company_list(request : Request, page : int = 1, limit : int 
 @router.post("/add_interest_company", status_code=status.HTTP_202_ACCEPTED)
 def create_interest_company(request : Request, company_id : int, db : Session = Depends(get_db)) :
     access_token = request.cookies.get("access_token")
+    if access_token == None : 
+        access_token = request.headers.get("ACCESS_TOKEN")
     if not jwt_token_check(access_token) :
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="접근 권한이 없습니다.")
     else :
@@ -267,6 +283,8 @@ def create_interest_company(request : Request, company_id : int, db : Session = 
 @router.post("/remove_interest_company")
 def delete_interest_company(request : Request, interest_id : int, db : Session = Depends(get_db)) :
     access_token = request.cookies.get("access_token")
+    if access_token == None : 
+        access_token = request.headers.get("ACCESS_TOKEN")
     if not jwt_token_check(access_token) :
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="접근 권한이 없습니다.")
     else :
@@ -281,6 +299,8 @@ def delete_interest_company(request : Request, interest_id : int, db : Session =
 @router.get("/search_history_list")
 def search_history_list(request : Request, page : int = 1, limit : int = 10, db : Session = Depends(get_db)) : 
     access_token = request.cookies.get("access_token")
+    if access_token == None : 
+        access_token = request.headers.get("ACCESS_TOKEN")
     if not jwt_token_check(access_token) :
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="접근 권한이 없습니다.")
     else :
@@ -312,6 +332,8 @@ def search_history_list(request : Request, page : int = 1, limit : int = 10, db 
 @router.post("/remove_search_history")
 def remove_search_history(request : Request, history_id : int, db : Session = Depends(get_db)) : 
     access_token = request.cookies.get("access_token")
+    if access_token == None : 
+        access_token = request.headers.get("ACCESS_TOKEN")
     if not jwt_token_check(access_token) :
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="접근 권한이 없습니다.")
     else :
