@@ -60,7 +60,7 @@ def update_password_user(db : Session, user_password_update : UserPasswordUpdate
     stmt = (
         update(Users)
         .where(
-            Users.id == user_password_update.id
+            Users.id == user_password_update.id,
         )
         .values(
             password = pwd_context.hash(user_password_update.changePassword)
