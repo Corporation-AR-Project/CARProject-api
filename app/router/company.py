@@ -105,6 +105,8 @@ def company_info(name : str, request : Request, db : Session = Depends(get_db)) 
 
         # 로그인 확인
         access_token = request.cookies.get("access_token")
+        if access_token == None : 
+                access_token = request.headers.get("ACCESS_TOKEN")
         if not access_token == None : # 로그인 되어있으면
             info = jwt.decode(access_token, SECRET_KEY, algorithms=ALGORITHM) # access_token 값 가져와서
             check = company_crud.check_interest_company(db, user_id=info['id'], company_id=company.id) # 관심기업인지 확인
