@@ -175,6 +175,8 @@ def company_analyze(request : Request, company_id : str, first_year : int = None
 
                     # 검색 기록 설정
                     access_token = request.cookies.get("access_token") # access_token 가져와서
+                    if access_token == None : 
+                        access_token = request.headers.get("ACCESS_TOKEN")
                     if not access_token == None : # 만약 로그인 했다면
                         info = jwt.decode(access_token, SECRET_KEY, algorithms=ALGORITHM) # 해당 정보 가져와서
                         # search_history 생성
