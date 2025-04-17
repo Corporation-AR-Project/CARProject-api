@@ -43,3 +43,12 @@ class CompanyHistory(BaseModel) :
     company_name : str
     start_year : str
     end_year : str
+
+class CompanyHistoryUpdate(BaseModel) : 
+    history_id : int
+
+class CompanyInterestUpdate(BaseModel) : 
+    company_id : int
+
+class CompanyInterestRemove(BaseModel) : 
+    interest_id : int

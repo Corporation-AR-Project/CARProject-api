@@ -264,7 +264,8 @@ def search_interest_company_list(request : Request, page : int = 1, limit : int 
 # 파라미터
 # company_id | int not null
 @router.post("/add_interest_company", status_code=status.HTTP_202_ACCEPTED)
-def create_interest_company(request : Request, company_id : int, db : Session = Depends(get_db)) :
+def create_interest_company(request : Request, _company_interest_add : company_schema.CompanyInterestUpdate, db : Session = Depends(get_db)) :
+    company_id = _company_interest_add.company_id
     access_token = request.cookies.get("access_token")
     if access_token == None : 
         access_token = request.headers.get("ACCESS_TOKEN")
@@ -274,14 +275,19 @@ def create_interest_company(request : Request, company_id : int, db : Session = 
         info = jwt.decode(access_token, SECRET_KEY, algorithms=ALGORITHM)
         user = users_crud.get_user(db, userid = dict(info)['userid'])
         company_crud.create_interest_company(db, company_schema.InterestCompanyCreate(user_id = user.id, company_id=company_id))
-        return { "msg" : "성공적으로 관심 기업이 등록되었습니다." }
+        data = company_crud.check_interest_company(db, user.id, company_id)
+        return { 
+            "msg" : "성공적으로 관심 기업이 등록되었습니다.",
+            "interest_id" : data.id
+        }
 
 # 관심 기업 해제 API (POST)
 # API URL : http://localhost:8000/user/remove_interest_company
 # 파라미터
 # interest_id | int not null
 @router.post("/remove_interest_company")
-def delete_interest_company(request : Request, interest_id : int, db : Session = Depends(get_db)) :
+def delete_interest_company(request : Request, _company_interest_remove : company_schema.CompanyInterestRemove, db : Session = Depends(get_db)) :
+    interest_id = _company_interest_remove.interest_id
     access_token = request.cookies.get("access_token")
     if access_token == None : 
         access_token = request.headers.get("ACCESS_TOKEN")
@@ -330,7 +336,8 @@ def search_history_list(request : Request, page : int = 1, limit : int = 10, db 
 # 파라미터
 # history_id | int not null
 @router.post("/remove_search_history")
-def remove_search_history(request : Request, history_id : int, db : Session = Depends(get_db)) : 
+def remove_search_history(request : Request, _company_history_update : company_schema.CompanyHistoryUpdate, db : Session = Depends(get_db)) : 
+    history_id = _company_history_update.history_id
     access_token = request.cookies.get("access_token")
     if access_token == None : 
         access_token = request.headers.get("ACCESS_TOKEN")

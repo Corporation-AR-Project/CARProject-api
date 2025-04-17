@@ -486,3 +486,11 @@ def company_rename_add(company_id : int, old_name : str, new_name : str, db : Se
 @router.get("/data/add/search_name")
 def company_search_name(company_id : int, name : str, db : Session = Depends(get_db)) :
     company_crud.create_company_search_name(db, company_id, name)
+
+@router.get("/search_name") 
+def company_search_name(company_id : int, db : Session = Depends(get_db)) : 
+    data = company_crud.search_company_name(db, id=company_id)
+    return {
+        "status" : "success",
+        "data" : data
+    }
