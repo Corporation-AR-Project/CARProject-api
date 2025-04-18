@@ -249,6 +249,8 @@ def search_interest_company_list(request : Request, page : int = 1, limit : int 
             interest_list.append({
                 "id" : item[0].id,
                 "company_name" : item[1].name,
+                "industry_code" : item[1].industry_code,
+                "industry_name" : item[1].industry_name,
                 "company_id" : item[0].company_id,
                 "user_id" : item[0].user_id,
                 "created_at" : item[0].created_at
