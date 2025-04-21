@@ -10,7 +10,7 @@
 + 총 기간 :  2025/03/08 ~ 2025/04/25
     + 기획 및 시스템 설계 : 2025/03/08 ~ 2025/03/09 ✅
     + 데이터 분석 및 정제 : 2025/03/10 ~ 2025/03/15 ✅
-    + Front-end 설계 및 구현 : 2025/03/18 ~ 2025/04/18
+    + Front-end 설계 및 구현 : 2025/03/18 ~ 2025/04/18 ✅
     + Back-end 설계 및 구현 : 2025/03/07 ~ 2025/03/25 ✅
     + 프로젝트 테스트 및 발표 : 2025/04/16 ~ 2025/04/25
 
@@ -78,6 +78,18 @@ pip install pytesseract
 
 # PyPDF2
 pip install PyPDF2
+
+# requests
+pip install requests
+
+# fitz
+pip install pymupdf
+
+# frontend
+pip install frontend
+
+# statsmodels
+pip install statsmodels
 ```
 
 ### Run
